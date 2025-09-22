@@ -70,7 +70,7 @@ async function findAll(table, conditions = '', params = []) {
   }
 }
 
-// Insert new record
+
 async function create(table, data) {
   try {
     const fields = Object.keys(data).join(', ');
@@ -80,7 +80,7 @@ async function create(table, data) {
     const query = `INSERT INTO ${table} (${fields}) VALUES (${placeholders})`;
     const [result] = await pool.execute(query, values);
 
-    // Return the created record
+
     return await findById(table, result.insertId);
   } catch (error) {
     console.error(`Error creating record in ${table}:`, error.message);

@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS inspections (
     checklist JSON COMMENT 'Inspection checklist responses',
     score INT COMMENT 'Inspection score out of 100',
     notes TEXT,
+    violations JSON COMMENT 'Array of violations found during inspection',
     recommendations TEXT,
     is_eligible_for_certification BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -148,6 +149,24 @@ CREATE TABLE IF NOT EXISTS inspections (
     INDEX idx_inspection_date (inspection_date)
 );
 
+-- Inspectors table (dedicated table for certified inspectors)
+CREATE TABLE IF NOT EXISTS inspectors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    specialization ENUM('organic-crops', 'livestock', 'processing', 'general', 'soil-management', 'pest-control') NOT NULL,
+    qualifications TEXT COMMENT 'Certifications, degrees, and training',
+    experience ENUM('1-2', '3-5', '6-10', '10+') DEFAULT '1-2',
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_email (email),
+    INDEX idx_status (status),
+    INDEX idx_specialization (specialization)
+);
+
 -- Certificates table
 CREATE TABLE IF NOT EXISTS certificates (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -158,6 +177,7 @@ CREATE TABLE IF NOT EXISTS certificates (
     status ENUM('active', 'expired', 'revoked', 'suspended') DEFAULT 'active',
     certification_body VARCHAR(255) DEFAULT 'Kenya Organic Agriculture Network',
     scope TEXT DEFAULT 'Organic crop production',
+    crop_types JSON COMMENT 'Array of certified crop types',
     pdf_url VARCHAR(500) COMMENT 'URL to PDF certificate',
     issued_by INT COMMENT 'User ID who issued the certificate',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

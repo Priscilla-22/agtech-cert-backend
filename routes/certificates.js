@@ -3,7 +3,9 @@ const router = express.Router();
 const PDFDocument = require('pdfkit');
 const fs = require('fs-extra');
 const path = require('path');
-const db = require('../models');
+const { Certificate, Farm, Farmer, Inspection } = require('../models');
+
+
 
 /**
  * @swagger
@@ -79,16 +81,25 @@ const db = require('../models');
  */
 router.get('/', async (req, res) => {
   try {
-    const certificates = await db.findAll('certificates');
+    const certificates = await Certificate.findAll();
 
-    // Enrich with farm and farmer data
     const enrichedCertificates = await Promise.all(certificates.map(async (certificate) => {
-      const farm = await db.findById('farms', certificate.farm_id);
-      const farmer = farm ? await db.findById('farmers', farm.farmer_id) : null;
-      const mappedCertificate = db.mapFieldsFromDatabase(certificate);
+      const farm = await Farm.findById(certificate.farm_id);
+      const farmer = farm ? await Farmer.findById(farm.farmer_id) : null;
+      const mappedCertificate = Certificate.mapFromDatabase(certificate);
+
+      let cropTypes = mappedCertificate.cropTypes;
+      if ((!cropTypes || (Array.isArray(cropTypes) && cropTypes.length === 0)) && farm && farm.crop_types) {
+        try {
+          cropTypes = typeof farm.crop_types === 'string' ? JSON.parse(farm.crop_types) : farm.crop_types;
+        } catch (e) {
+          cropTypes = null;
+        }
+      }
 
       return {
         ...mappedCertificate,
+        cropTypes: cropTypes,
         farmName: farm ? farm.farm_name : 'Unknown',
         farmerName: farmer ? farmer.name : 'Unknown'
       };
@@ -129,19 +140,19 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
-    const certificate = await db.findById('certificates', parseInt(req.params.id));
+    const certificate = await Certificate.findById(parseInt(req.params.id));
     if (!certificate) {
       return res.status(404).json({ error: 'Certificate not found' });
     }
 
-    const farm = await db.findById('farms', certificate.farm_id);
-    const farmer = farm ? await db.findById('farmers', farm.farmer_id) : null;
-    const inspections = await db.findBy('inspections', { farm_id: certificate.farm_id });
+    const farm = await Farm.findById(certificate.farm_id);
+    const farmer = farm ? await Farmer.findById(farm.farmer_id) : null;
+    const inspections = await Inspection.findByFarmId(certificate.farm_id);
 
-    const mappedCertificate = db.mapFieldsFromDatabase(certificate);
-    const mappedFarm = farm ? db.mapFieldsFromDatabase(farm) : null;
-    const mappedFarmer = farmer ? db.mapFieldsFromDatabase(farmer) : null;
-    const mappedInspections = inspections.map(inspection => db.mapFieldsFromDatabase(inspection));
+    const mappedCertificate = Certificate.mapFromDatabase(certificate);
+    const mappedFarm = farm ? Farm.mapFromDatabase(farm) : null;
+    const mappedFarmer = farmer ? Farmer.mapFromDatabase(farmer) : null;
+    const mappedInspections = inspections.map(inspection => Inspection.mapFromDatabase(inspection));
 
     res.json({
       ...mappedCertificate,
@@ -152,6 +163,94 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching certificate:', error);
     res.status(500).json({ error: 'Failed to fetch certificate' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/certificates:
+ *   post:
+ *     summary: Create a new certificate
+ *     description: Issue a new organic certificate for a farm
+ *     tags: [Certificates]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - farmId
+ *               - issueDate
+ *               - expiryDate
+ *               - cropTypes
+ *             properties:
+ *               farmId:
+ *                 type: string
+ *                 description: ID of the farm to certify
+ *               issueDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Certificate issue date
+ *               expiryDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Certificate expiry date
+ *               cropTypes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of certified crop types
+ *     responses:
+ *       201:
+ *         description: Certificate created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Certificate'
+ *       400:
+ *         description: Bad request - invalid data
+ *       404:
+ *         description: Farm not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/', async (req, res) => {
+  try {
+    const { farmId, issueDate, expiryDate, cropTypes } = req.body;
+
+    if (!farmId || !issueDate || !expiryDate) {
+      return res.status(400).json({ error: 'farmId, issueDate, and expiryDate are required' });
+    }
+
+    const farm = await Farm.findById(parseInt(farmId));
+    if (!farm) {
+      return res.status(404).json({ error: 'Farm not found' });
+    }
+
+    const certificate = await Certificate.create({
+      farmId: parseInt(farmId),
+      issueDate,
+      expiryDate,
+      cropTypes
+    });
+
+    if (!certificate) {
+      return res.status(500).json({ error: 'Failed to create certificate' });
+    }
+
+    const farmer = await Farmer.findById(farm.farmer_id);
+    const mappedCertificate = Certificate.mapFromDatabase(certificate);
+
+    res.status(201).json({
+      ...mappedCertificate,
+      farmName: farm.farm_name,
+      farmerName: farmer ? farmer.name : 'Unknown'
+    });
+
+  } catch (error) {
+    console.error('Error creating certificate:', error);
+    res.status(500).json({ error: 'Failed to create certificate' });
   }
 });
 
@@ -184,14 +283,14 @@ router.get('/:id', async (req, res) => {
  */
 router.get('/:id/pdf', async (req, res) => {
   try {
-    const certificate = await db.findById('certificates', parseInt(req.params.id));
+    const certificate = await Certificate.findById(parseInt(req.params.id));
     if (!certificate) {
       return res.status(404).json({ error: 'Certificate not found' });
     }
 
-    const farm = await db.findById('farms', certificate.farm_id);
-    const farmer = farm ? await db.findById('farmers', farm.farmer_id) : null;
-    const inspections = await db.findBy('inspections', { farm_id: certificate.farm_id });
+    const farm = await Farm.findById(certificate.farm_id);
+    const farmer = farm ? await Farmer.findById(farm.farmer_id) : null;
+    const inspections = await Inspection.findByFarmId(certificate.farm_id);
     const approvedInspection = inspections.find(i => i.status === 'Approved');
 
     if (!farm || !farmer) {
@@ -201,24 +300,16 @@ router.get('/:id/pdf', async (req, res) => {
     const pdfFileName = `certificate-${certificate.certificate_number || certificate.certificateNumber}.pdf`;
     const pdfPath = path.join(__dirname, '../certificates', pdfFileName);
 
-    // Create PDF
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
-
-    // Pipe PDF to file
     doc.pipe(fs.createWriteStream(pdfPath));
 
-    // Add content to PDF
-    await generateCertificatePDF(doc, certificate, farm, farmer, approvedInspection);
-
+    await generateCertificatePDF(doc, certificate, farm, farmer);
     doc.end();
 
-    // Wait for PDF to be written
     doc.on('end', async () => {
-      // Update certificate with PDF URL
       const pdfUrl = `/certificates/${pdfFileName}`;
-      await db.update('certificates', certificate.id, { pdfUrl });
+      await Certificate.update(certificate.id, { pdfUrl });
 
-      // Send PDF as response
       res.download(pdfPath, pdfFileName, (err) => {
         if (err) {
           console.error('Error sending PDF:', err);
@@ -234,125 +325,175 @@ router.get('/:id/pdf', async (req, res) => {
 });
 
 // Helper function to generate PDF content
-async function generateCertificatePDF(doc, certificate, farm, farmer, inspection) {
+async function generateCertificatePDF(doc, certificate, farm, farmer) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
 
-  // Header
-  doc.fillColor('#2E7D32')
+  // Professional color scheme matching the report
+  const headerBlue = '#e6f2ff'; // Light blue header background
+  const pesiraBlue = '#1e40af'; // Dark blue for PESIRA text
+  const leafGreen = '#22c55e'; // Green for logo elements
+  const textDark = '#374151'; // Dark gray for main text
+  const borderGray = '#d1d5db'; // Light gray for borders
+  const tableHeaderBlue = '#cbd5e1'; // Table header background
+
+  // Header section with light blue background
+  doc.rect(0, 0, pageWidth, 120)
+     .fillAndStroke(headerBlue, headerBlue);
+
+  // Pesira logo area (left side)
+  doc.fillColor(leafGreen)
+     .circle(60, 60, 25)
+     .fill();
+
+  // Simple leaf shape in logo
+  doc.fillColor('#ffffff')
+     .fontSize(8)
+     .text('🌿', 52, 54);
+
+  // PESIRA title
+  doc.fillColor(pesiraBlue)
      .fontSize(28)
      .font('Helvetica-Bold')
-     .text('ORGANIC CERTIFICATION', 50, 80, { align: 'center' });
+     .text('PESIRA', 110, 35);
 
-  // Certificate badge
-  doc.fillColor('#4CAF50')
-     .fontSize(16)
-     .font('Helvetica-Bold')
-     .text('CERTIFIED ORGANIC', 50, 120, { align: 'center' });
-
-  // Certificate details box
-  const boxY = 180;
-  doc.rect(50, boxY, pageWidth - 100, 300)
-     .stroke('#E0E0E0');
-
-  // Certificate info
-  doc.fillColor('#000000')
-     .fontSize(14)
-     .font('Helvetica-Bold')
-     .text('Certificate Number:', 70, boxY + 30)
+  // Subtitle
+  doc.fillColor(textDark)
+     .fontSize(12)
      .font('Helvetica')
-     .text(certificate.certificate_number || certificate.certificateNumber, 220, boxY + 30);
+     .text('PESIRA - Agricultural Technology Certification Platform', 110, 65);
 
-  doc.font('Helvetica-Bold')
-     .text('Issue Date:', 70, boxY + 55)
-     .font('Helvetica')
-     .text(new Date(certificate.issue_date || certificate.issueDate).toLocaleDateString(), 220, boxY + 55);
-
-  doc.font('Helvetica-Bold')
-     .text('Expiry Date:', 70, boxY + 80)
-     .font('Helvetica')
-     .text(new Date(certificate.expiry_date || certificate.expiryDate).toLocaleDateString(), 220, boxY + 80);
-
-  // Farmer details
-  doc.fontSize(16)
+  // Certificate title
+  doc.fillColor(textDark)
+     .fontSize(24)
      .font('Helvetica-Bold')
-     .text('FARMER DETAILS', 70, boxY + 120);
+     .text('Organic Certification Certificate', 50, 160, { align: 'center' });
 
+  // Certificate number and generation info
   doc.fontSize(12)
+     .font('Helvetica')
+     .text(`Certificate Number: ${certificate.certificate_number || certificate.certificateNumber}`, 50, 190);
+
+  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 50, 210);
+  doc.text(`Valid until: ${new Date(certificate.expiry_date || certificate.expiryDate).toLocaleDateString()}`, 50, 230);
+
+  // Main content table structure
+  const tableStartY = 270;
+  const rowHeight = 25;
+  const colWidths = [120, 200, 120, 200]; // Four columns
+  let currentY = tableStartY;
+
+  // Table header
+  doc.rect(50, currentY, pageWidth - 100, rowHeight)
+     .fillAndStroke(tableHeaderBlue, borderGray);
+
+  doc.fillColor(textDark)
+     .fontSize(12)
      .font('Helvetica-Bold')
-     .text('Name:', 70, boxY + 150)
-     .font('Helvetica')
-     .text(farmer.name, 150, boxY + 150);
+     .text('Field', 60, currentY + 8)
+     .text('Value', 180, currentY + 8)
+     .text('Field', 310, currentY + 8)
+     .text('Value', 430, currentY + 8);
 
-  doc.font('Helvetica-Bold')
-     .text('Email:', 70, boxY + 170)
-     .font('Helvetica')
-     .text(farmer.email, 150, boxY + 170);
+  currentY += rowHeight;
 
-  doc.font('Helvetica-Bold')
-     .text('Phone:', 70, boxY + 190)
-     .font('Helvetica')
-     .text(farmer.phone, 150, boxY + 190);
+  // Helper function to add table row
+  function addTableRow(label1, value1, label2 = '', value2 = '') {
+    // Alternating row colors
+    const fillColor = (currentY - tableStartY - rowHeight) % (rowHeight * 2) === 0 ? '#ffffff' : '#f9fafb';
 
-  doc.font('Helvetica-Bold')
-     .text('Address:', 70, boxY + 210)
-     .font('Helvetica')
-     .text(farmer.address, 150, boxY + 210);
+    doc.rect(50, currentY, pageWidth - 100, rowHeight)
+       .fillAndStroke(fillColor, borderGray);
 
-  // Farm details
-  doc.fontSize(16)
-     .font('Helvetica-Bold')
-     .text('FARM DETAILS', 300, boxY + 120);
-
-  doc.fontSize(12)
-     .font('Helvetica-Bold')
-     .text('Farm Name:', 300, boxY + 150)
-     .font('Helvetica')
-     .text(farm.farm_name || farm.name, 380, boxY + 150);
-
-  doc.font('Helvetica-Bold')
-     .text('Location:', 300, boxY + 170)
-     .font('Helvetica')
-     .text(farm.location, 380, boxY + 170);
-
-  doc.font('Helvetica-Bold')
-     .text('Size:', 300, boxY + 190)
-     .font('Helvetica')
-     .text(`${farm.total_area || farm.size} hectares`, 380, boxY + 190);
-
-  doc.font('Helvetica-Bold')
-     .text('Crop Types:', 300, boxY + 210)
-     .font('Helvetica')
-     .text(Array.isArray(farm.crop_types || farm.cropTypes) ? (farm.crop_types || farm.cropTypes).join(', ') : (farm.crop_types || farm.cropTypes || ''), 380, boxY + 210);
-
-  // Inspection details
-  if (inspection) {
-    doc.fontSize(16)
+    doc.fillColor(textDark)
+       .fontSize(10)
        .font('Helvetica-Bold')
-       .text('INSPECTION DETAILS', 70, boxY + 250);
+       .text(label1, 60, currentY + 8);
 
-    doc.fontSize(12)
-       .font('Helvetica-Bold')
-       .text('Inspector:', 70, boxY + 275)
-       .font('Helvetica')
-       .text(inspection.inspector_name || inspection.inspectorName, 150, boxY + 275);
+    doc.font('Helvetica')
+       .text(value1, 180, currentY + 8, { width: 120 });
 
-    doc.font('Helvetica-Bold')
-       .text('Compliance Score:', 300, boxY + 275)
-       .font('Helvetica')
-       .text(`${inspection.compliance_score || inspection.complianceScore}%`, 420, boxY + 275);
+    if (label2) {
+      doc.font('Helvetica-Bold')
+         .text(label2, 310, currentY + 8);
+
+      doc.font('Helvetica')
+         .text(value2, 430, currentY + 8, { width: 120 });
+    }
+
+    currentY += rowHeight;
   }
 
-  // Footer
-  doc.fontSize(10)
+  // Certificate information
+  addTableRow('Issue Date', new Date(certificate.issue_date || certificate.issueDate).toLocaleDateString(),
+             'Status', 'ACTIVE');
+
+  addTableRow('Expiry Date', new Date(certificate.expiry_date || certificate.expiryDate).toLocaleDateString(),
+             'Certification Body', 'KOAN');
+
+  // Farmer information
+  addTableRow('Farmer Name', farmer.name, 'Phone', farmer.phone);
+  addTableRow('Email', farmer.email, 'ID Number', farmer.id_number || 'N/A');
+  addTableRow('County', farmer.county || 'N/A', 'Sub County', farmer.sub_county || 'N/A');
+
+  // Farm information
+  addTableRow('Farm Name', farm.farm_name || farm.name, 'Location', farm.location);
+  addTableRow('Total Area', `${farm.total_area || farm.size || 'N/A'} hectares`,
+             'Organic Since', farm.organic_since ? new Date(farm.organic_since).toLocaleDateString() : 'N/A');
+
+  // Certified crops
+  const cropTypes = certificate.crop_types || farm.crop_types;
+  let displayCrops = 'No crops specified';
+  if (cropTypes) {
+    try {
+      const crops = typeof cropTypes === 'string' ? JSON.parse(cropTypes) : cropTypes;
+      displayCrops = Array.isArray(crops) && crops.length > 0 ? crops.join(', ') : 'No crops specified';
+    } catch (e) {
+      displayCrops = 'No crops specified';
+    }
+  }
+
+  addTableRow('Certified Crops', displayCrops, 'Farming Type', farm.farming_type || 'N/A');
+
+  // Certification statement
+  currentY += 20;
+  doc.rect(50, currentY, pageWidth - 100, 60)
+     .fillAndStroke('#f0f9ff', pesiraBlue);
+
+  doc.fillColor(pesiraBlue)
+     .fontSize(14)
+     .font('Helvetica-Bold')
+     .text('CERTIFICATION STATEMENT', 60, currentY + 10);
+
+  doc.fillColor(textDark)
+     .fontSize(11)
      .font('Helvetica')
-     .fillColor('#666666')
-     .text('This certificate confirms that the above farm meets organic certification standards.', 50, pageHeight - 100, { align: 'center' });
+     .text('This certificate confirms that the above farm and farmer meet the organic', 60, currentY + 30)
+     .text('certification standards as set by the Kenya Organic Agriculture Network (KOAN).', 60, currentY + 45);
 
-  doc.text('Inspector Signature: _____________________________', 50, pageHeight - 70);
+  // Footer
+  const footerY = pageHeight - 80;
+  doc.rect(0, footerY, pageWidth, 80)
+     .fillAndStroke(headerBlue, headerBlue);
 
+  doc.fillColor(textDark)
+     .fontSize(10)
+     .font('Helvetica')
+     .text('PESIRA - Agricultural Technology Certification', 50, footerY + 20, { align: 'center' });
+
+  // Signature area
+  doc.strokeColor(textDark)
+     .lineWidth(1)
+     .moveTo(400, footerY + 40)
+     .lineTo(550, footerY + 40)
+     .stroke();
+
+  doc.text('Authorized Signature', 400, footerY + 50);
+  doc.text('Certification Officer', 400, footerY + 65);
+
+  // Page number
   doc.fontSize(8)
-     .text(`Generated on ${new Date().toLocaleDateString()} | Certificate ID: ${certificate.id}`, 50, pageHeight - 30, { align: 'center' });
+     .text('Page 1', pageWidth - 100, footerY + 65);
 }
 
 /**
@@ -383,12 +524,11 @@ async function generateCertificatePDF(doc, certificate, farm, farmer, inspection
  */
 router.delete('/:id', async (req, res) => {
   try {
-    const certificate = await db.findById('certificates', parseInt(req.params.id));
+    const certificate = await Certificate.findById(parseInt(req.params.id));
     if (!certificate) {
       return res.status(404).json({ error: 'Certificate not found' });
     }
 
-    // Delete PDF file if it exists
     if (certificate.pdf_url || certificate.pdfUrl) {
       const pdfUrl = certificate.pdf_url || certificate.pdfUrl;
       const pdfFileName = path.basename(pdfUrl);
@@ -400,11 +540,144 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
-    await db.delete('certificates', parseInt(req.params.id));
+    await Certificate.delete(parseInt(req.params.id));
     res.json({ message: 'Certificate deleted successfully' });
   } catch (error) {
     console.error('Error deleting certificate:', error);
     res.status(500).json({ error: 'Failed to delete certificate' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/certificates/{id}/renew:
+ *   post:
+ *     summary: Submit certificate renewal request
+ *     description: Submit a request to renew an existing certificate
+ *     tags: [Certificates]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique certificate identifier
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Reason for renewal request
+ *                 example: "Certificate expiring soon"
+ *               notes:
+ *                 type: string
+ *                 description: Additional notes for the renewal request
+ *                 example: "Farm has maintained organic standards"
+ *               requestedExpiryDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Requested new expiry date
+ *                 example: "2027-01-15"
+ *     responses:
+ *       200:
+ *         description: Renewal request submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Renewal request submitted successfully"
+ *                 renewalData:
+ *                   type: object
+ *                   properties:
+ *                     certificateId:
+ *                       type: integer
+ *                       description: ID of the certificate being renewed
+ *                     status:
+ *                       type: string
+ *                       example: "pending"
+ *                     requestDate:
+ *                       type: string
+ *                       format: date
+ *                       description: Date the renewal was requested
+ *       400:
+ *         description: Bad request - missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Reason for renewal is required"
+ *       404:
+ *         description: Certificate not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Certificate not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to submit renewal request"
+ */
+router.post('/:id/renew', async (req, res) => {
+  try {
+    const certificate = await Certificate.findById(parseInt(req.params.id));
+    if (!certificate) {
+      return res.status(404).json({ error: 'Certificate not found' });
+    }
+
+    const { reason, notes, requestedExpiryDate } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({ error: 'Reason for renewal is required' });
+    }
+
+    const renewalData = {
+      certificateId: certificate.id,
+      farmId: certificate.farm_id,
+      reason,
+      notes: notes || '',
+      requestedExpiryDate: requestedExpiryDate || null,
+      status: 'pending',
+      requestDate: new Date().toISOString().split('T')[0]
+    };
+
+    // Set certificate status to renewal_pending to indicate awaiting approval
+    await Certificate.update(certificate.id, {
+      status: 'renewal_pending'
+    });
+
+    res.json({
+      message: 'Renewal request submitted successfully',
+      renewalData: {
+        certificateId: certificate.id,
+        status: 'pending',
+        requestDate: renewalData.requestDate
+      }
+    });
+  } catch (error) {
+    console.error('Error submitting renewal request:', error);
+    res.status(500).json({ error: 'Failed to submit renewal request' });
   }
 });
 

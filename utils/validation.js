@@ -26,13 +26,13 @@ const getUserFriendlyError = (validationErrors) => {
   };
 
   return validationErrors.map(error => {
-    // Find a matching user-friendly message
+
     for (const [key, friendlyMessage] of Object.entries(errorMap)) {
       if (error.includes(key)) {
         return friendlyMessage;
       }
     }
-    // Return original error if no mapping found
+
     return error;
   });
 };
@@ -89,13 +89,6 @@ const validateFarmer = (data) => {
     errors.push('Physical address is required');
   }
 
-  // GPS coordinates validation (optional but must be valid if provided)
-  if (data.latitude && (isNaN(data.latitude) || data.latitude < -90 || data.latitude > 90)) {
-    errors.push('Latitude must be between -90 and 90 degrees');
-  }
-  if (data.longitude && (isNaN(data.longitude) || data.longitude < -180 || data.longitude > 180)) {
-    errors.push('Longitude must be between -180 and 180 degrees');
-  }
 
   // Step 3: Farming Background
   const validFarmingExperienceValues = ['0-2', '3-5', '6-10', '11-20', '20+'];

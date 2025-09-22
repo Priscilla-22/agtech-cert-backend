@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
+const dbConfig = require('../config/database');
 const { validateFarm } = require('../utils/validation');
 
 /**
@@ -242,13 +243,32 @@ router.post('/', async (req, res) => {
     }
 
     const farmData = {
-      ...req.body,
+      farmerId: req.body.farmerId,
+      farmName: req.body.name || req.body.farmName,
+      location: req.body.location,
+      totalArea: req.body.totalArea,
+      organicArea: req.body.organicArea || req.body.cultivatedSize,
+      cropTypes: req.body.cropTypes || [],
       organicSince: req.body.organicSince || new Date().toISOString().split('T')[0],
-      certificationStatus: 'pending',
-      cropTypes: req.body.cropTypes || []
+      certificationStatus: 'pending'
     };
 
-    const farm = await db.create('farms', farmData);
+    // Create farm record - bypass mapping function for farms to avoid field conflicts
+    const farmResult = await dbConfig.executeQuery(
+      'INSERT INTO farms (farmer_id, farm_name, location, total_area, organic_area, crop_types, organic_since, certification_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        farmData.farmerId,
+        farmData.farmName,
+        farmData.location,
+        farmData.totalArea,
+        farmData.organicArea,
+        JSON.stringify(farmData.cropTypes),
+        farmData.organicSince,
+        farmData.certificationStatus
+      ]
+    );
+
+    const farm = { id: farmResult.insertId, ...farmData };
 
     // Update farmer's totalFarms count
     const farmerFarms = await db.findBy('farms', { farmer_id: farmer.id });

@@ -10,7 +10,7 @@ const { testConnection } = require('./config/database');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3006;
 
 // Middleware
 app.use(helmet());
@@ -38,6 +38,7 @@ app.use('/api/farmers', require('./routes/farmers'));
 app.use('/api/farms', require('./routes/farms'));
 app.use('/api/fields', require('./routes/fields'));
 app.use('/api/inspections', require('./routes/inspections'));
+app.use('/api/inspectors', require('./routes/inspectors'));
 app.use('/api/certificates', require('./routes/certificates'));
 
 /**

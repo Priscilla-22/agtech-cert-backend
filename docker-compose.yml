@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # MySQL Database (Local - Commented out, using hosted MySQL instead)
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: agtech_mysql
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: rootpassword
+  #     MYSQL_DATABASE: pesira_db
+  #     MYSQL_USER: agtech_user
+  #     MYSQL_PASSWORD: agtech_password
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #     - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+  #     - ./database/add_renewal_status.sql:/docker-entrypoint-initdb.d/02-add_renewal_status.sql
+  #     - ./database/add_status_history.sql:/docker-entrypoint-initdb.d/03-add_status_history.sql
+  #     - ./database/add_violations_column.sql:/docker-entrypoint-initdb.d/04-add_violations_column.sql
+  #   networks:
+  #     - agtech_network
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     timeout: 20s
+  #     retries: 10
+
+  # Backend Application
+  backend:
+    build: .
+    container_name: agtech_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql-3240cee4-wakahia6-2bcb.f.aivencloud.com
+      - DB_PORT=21493
+      - DB_USER=avnadmin
+      - DB_PASSWORD=AVNS_JAIxDiZrBFXCml9FNQk
+      - DB_DATABASE=defaultdb
+      - DB_SSL=true
+      - JWT_SECRET=your_production_jwt_secret_here
+    volumes:
+      - ./certificates:/app/certificates
+      - ./public:/app/public
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Networks and volumes (commented out - not needed for hosted database)
+# networks:
+#   agtech_network:
+#     driver: bridge
+
+# volumes:
+#   mysql_data:
+#     driver: local

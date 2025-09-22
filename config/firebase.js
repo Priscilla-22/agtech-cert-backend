@@ -10,9 +10,6 @@ const firebaseConfig = {
   measurementId: "G-BX0NC8K8FR"
 };
 
-// Initialize Firebase Admin SDK
-// Note: You'll need to set up your service account key
-// For now, we'll use the project ID from the config
 if (!admin.apps.length) {
   admin.initializeApp({
     projectId: firebaseConfig.projectId,

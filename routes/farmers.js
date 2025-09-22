@@ -4,7 +4,12 @@ const db = require('../models');
 const dbConfig = require('../config/database');
 const { validateFarmer, getUserFriendlyError } = require('../utils/validation');
 
-// Map frontend organic experience values to database ENUM values
+const generateMemberNumber = () => {
+  const timestamp = Date.now().toString(36).slice(-3).toUpperCase();
+  const random = Math.random().toString(36).substr(2, 2).toUpperCase();
+  return `${timestamp}${random}`;
+};
+
 function mapOrganicExperience(frontendValue) {
   const mapping = {
     'beginner': '0-1',
@@ -427,7 +432,11 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Separate farmer data (only farmer-specific fields)
     const farmerData = {
+      // System generated fields
+      memberNumber: generateMemberNumber(),
+
       // Step 1: Personal & Contact Information
       name: req.body.name,
       email: req.body.email,
@@ -452,14 +461,6 @@ router.post('/', async (req, res) => {
       primaryCrops: req.body.primaryCrops || [],
       farmingType: req.body.farmingType,
 
-      // Step 4: Farm Details
-      totalLandSize: totalLandSize,
-      cultivatedSize: cultivatedSize,
-      landTenure: req.body.landTenure === 'leasehold' ? 'leased' : req.body.landTenure,
-      soilType: req.body.soilType,
-      waterSources: req.body.waterSources || [],
-      irrigationSystem: req.body.irrigationMethod || req.body.irrigationSystem || 'none',
-
       // Step 5: Certification Status
       previousCertification: req.body.previousCertification,
       certifyingBody: req.body.certifyingBody || req.body.certificationBodies || '',
@@ -473,11 +474,40 @@ router.post('/', async (req, res) => {
       status: req.body.status || 'active',
       notes: req.body.notes || '',
       registrationDate: new Date().toISOString().split('T')[0],
-      totalFarms: 0,
+      totalFarms: 1, // Will have 1 farm initially
       certificationStatus: 'pending'
     };
 
+    // Create farmer first
     const farmer = await db.create('farmers', farmerData);
+
+    // Prepare farm data (farm-specific fields)
+    const farmData = {
+      farmerId: farmer.id,
+      farmName: `${req.body.name}'s Farm`, // Default farm name
+      location: req.body.address,
+      totalArea: totalLandSize,
+      organicArea: cultivatedSize,
+      cropTypes: req.body.primaryCrops || [],
+      organicSince: new Date().toISOString().split('T')[0], // Today's date
+      certificationStatus: 'pending'
+    };
+
+    // Create farm record - bypass mapping function for farms
+    const farmResult = await dbConfig.executeQuery(
+      'INSERT INTO farms (farmer_id, farm_name, location, total_area, organic_area, crop_types, organic_since, certification_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        farmer.id,
+        farmData.farmName,
+        farmData.location,
+        farmData.totalArea,
+        farmData.organicArea,
+        JSON.stringify(farmData.cropTypes),
+        farmData.organicSince,
+        farmData.certificationStatus
+      ]
+    );
+
     const mappedFarmer = db.mapFieldsFromDatabase(farmer);
     res.status(201).json(mappedFarmer);
   } catch (error) {
