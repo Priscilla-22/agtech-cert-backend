@@ -135,8 +135,25 @@ class PDFService {
            .text("standards for the production of:", { align: "center" })
            .moveDown(1.5)
 
-        // Crops - simple list
-        const cropTypes = farmData.crop_types ? JSON.parse(farmData.crop_types) : ["Organic crops"]
+        // Crops - simple list with safe JSON parsing
+        let cropTypes = ["Organic crops"];
+        if (farmData.crop_types) {
+          try {
+            if (typeof farmData.crop_types === 'string') {
+              // Try parsing as JSON first
+              cropTypes = JSON.parse(farmData.crop_types);
+            } else if (Array.isArray(farmData.crop_types)) {
+              // Already an array
+              cropTypes = farmData.crop_types;
+            } else {
+              // Convert to string and split by comma as fallback
+              cropTypes = farmData.crop_types.toString().split(',').map(crop => crop.trim());
+            }
+          } catch (error) {
+            // If JSON parsing fails, try splitting by comma
+            cropTypes = farmData.crop_types.split(',').map(crop => crop.trim());
+          }
+        }
 
         doc.fontSize(13)
            .fillColor(COLORS.primary)
