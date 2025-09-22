@@ -243,12 +243,12 @@ router.get('/', async (req, res) => {
     }
 
     if (registrationDateFrom) {
-      conditions.push('registrationDate >= ?');
+      conditions.push('registration_date >= ?');
       params.push(registrationDateFrom);
     }
 
     if (registrationDateTo) {
-      conditions.push('registrationDate <= ?');
+      conditions.push('registration_date <= ?');
       params.push(registrationDateTo);
     }
 
@@ -269,7 +269,7 @@ router.get('/', async (req, res) => {
     if (whereClause) {
       farmersQuery += ` WHERE ${whereClause}`;
     }
-    farmersQuery += ` ORDER BY registrationDate DESC LIMIT ? OFFSET ?`;
+    farmersQuery += ` ORDER BY registration_date DESC LIMIT ? OFFSET ?`;
 
     const farmers = await dbConfig.executeQuery(farmersQuery, [...params, parseInt(limit), parseInt(offset)]);
     const mappedFarmers = farmers.map(farmer => db.mapFieldsFromDatabase(farmer));
@@ -495,7 +495,7 @@ router.post('/', async (req, res) => {
 
     // Create farm record - bypass mapping function for farms
     const farmResult = await dbConfig.executeQuery(
-      'INSERT INTO farms (farmerId, farmName, location, totalArea, organicArea, cropTypes, organicSince, certificationStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO farms (farmer_id, farm_name, location, total_area, organic_area, crop_types, organic_since, certification_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [
         farmer.id,
         farmData.farmName,
