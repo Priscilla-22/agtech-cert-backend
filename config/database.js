@@ -16,6 +16,13 @@ const dbConfig = {
   reconnect: true
 };
 
+// Add SSL configuration if DB_SSL is true
+if (process.env.DB_SSL === 'true') {
+  dbConfig.ssl = {
+    rejectUnauthorized: false
+  };
+}
+
 // Create connection pool
 const pool = mysql.createPool(dbConfig);
 
