@@ -14,31 +14,52 @@ class Farmer {
       name: data.name,
       email: data.email,
       phone: data.phone,
-      alternate_phone: data.alternatePhone,
-      id_number: data.idNumber,
-      date_of_birth: data.dateOfBirth,
+      alternatePhone: data.alternatePhone,
+      idNumber: data.idNumber,
+      dateOfBirth: data.dateOfBirth,
       county: data.county,
       sub_county: data.subCounty,
-      farming_experience: data.farmingExperience,
-      education_level: data.educationLevel,
-      agricultural_training: data.agriculturalTraining,
-      primary_crops: data.primaryCrops ? JSON.stringify(data.primaryCrops) : null,
-      farming_type: data.farmingType,
-      total_land_size: data.totalLandSize,
-      cultivated_size: data.cultivatedSize,
-      land_tenure: data.landTenure,
-      soil_type: data.soilType,
-      water_sources: data.waterSources ? JSON.stringify(data.waterSources) : null,
-      irrigation_system: data.irrigationSystem,
-      previous_certification: data.previousCertification,
-      certifying_body: data.certifyingBody,
-      certification_expiry: data.certificationExpiry,
-      organic_experience: data.organicExperience,
-      registration_date: data.registrationDate || new Date(),
-      certification_status: data.certificationStatus || 'pending',
-      created_at: new Date(),
-      updated_at: new Date()
+      ward: data.ward,
+      village: data.village,
+      address: data.address,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      farmingExperience: data.farmingExperience,
+      educationLevel: data.educationLevel,
+      agriculturalTraining: data.agriculturalTraining,
+      primaryCrops: data.primaryCrops ? JSON.stringify(data.primaryCrops) : null,
+      farmingType: data.farmingType,
+      totalLandSize: data.totalLandSize,
+      cultivatedSize: data.cultivatedSize,
+      landTenure: data.landTenure,
+      soilType: data.soilType,
+      waterSources: data.waterSources ? JSON.stringify(data.waterSources) : null,
+      irrigationSystem: data.irrigationSystem,
+      previousCertification: data.previousCertification,
+      certifyingBody: data.certifyingBody,
+      certificationExpiry: data.certificationExpiry,
+      organicExperience: data.organicExperience,
+      motivation: data.motivation,
+      challenges: data.challenges,
+      expectations: data.expectations,
+      status: data.status,
+      notes: data.notes,
+      totalFarms: data.totalFarms,
+      registration_date: data.registrationDate || new Date().toISOString().split('T')[0],
+      certification_status: data.certificationStatus || 'pending'
     };
+
+    // Check for undefined values and provide specific error
+    const undefinedFields = [];
+    Object.entries(farmerData).forEach(([key, value]) => {
+      if (value === undefined) {
+        undefinedFields.push(key);
+      }
+    });
+
+    if (undefinedFields.length > 0) {
+      throw new Error(`The following fields have undefined values: ${undefinedFields.join(', ')}`);
+    }
 
     return await db.create('farmers', farmerData);
   }

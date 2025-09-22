@@ -266,15 +266,19 @@ router.get('/', async (req, res) => {
 
     // Get filtered farmers with pagination
     let farmersQuery = `SELECT * FROM farmers`;
+    let farmersParams = [...params];
+
     if (whereClause) {
       farmersQuery += ` WHERE ${whereClause}`;
     }
-    farmersQuery += ` ORDER BY registration_date DESC LIMIT ? OFFSET ?`;
 
     const limitNum = Math.max(1, parseInt(limit) || 50);
     const offsetNum = Math.max(0, parseInt(offset) || 0);
 
-    const farmers = await dbConfig.executeQuery(farmersQuery, [...params, limitNum, offsetNum]);
+    // Use string interpolation for LIMIT and OFFSET to avoid parameter binding issues
+    farmersQuery += ` ORDER BY registration_date DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
+
+    const farmers = await dbConfig.executeQuery(farmersQuery, farmersParams);
     const mappedFarmers = farmers.map(farmer => db.mapFieldsFromDatabase(farmer));
 
     res.json({
@@ -286,7 +290,25 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching farmers:', error);
-    res.status(500).json({ error: 'Failed to fetch farmers' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sql: error.sql,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
+
+    // Return more specific error message in development
+    if (process.env.NODE_ENV === 'development') {
+      res.status(500).json({
+        error: 'Failed to fetch farmers',
+        details: error.message,
+        code: error.code
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch farmers' });
+    }
   }
 });
 
@@ -464,6 +486,14 @@ router.post('/', async (req, res) => {
       primaryCrops: req.body.primaryCrops || [],
       farmingType: req.body.farmingType,
 
+      // Step 4: Farm Details (calculated above)
+      totalLandSize: totalLandSize,
+      cultivatedSize: cultivatedSize,
+      landTenure: req.body.landTenure,
+      soilType: req.body.soilType,
+      waterSources: req.body.waterSources || [],
+      irrigationSystem: req.body.irrigationSystem || 'none',
+
       // Step 5: Certification Status
       previousCertification: req.body.previousCertification,
       certifyingBody: req.body.certifyingBody || req.body.certificationBodies || '',
@@ -515,7 +545,25 @@ router.post('/', async (req, res) => {
     res.status(201).json(mappedFarmer);
   } catch (error) {
     console.error('Error creating farmer:', error);
-    res.status(500).json({ error: 'Failed to create farmer' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sql: error.sql,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
+
+    // Return more specific error message in development
+    if (process.env.NODE_ENV === 'development') {
+      res.status(500).json({
+        error: 'Failed to create farmer',
+        details: error.message,
+        code: error.code
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to create farmer' });
+    }
   }
 });
 
