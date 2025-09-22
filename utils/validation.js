@@ -185,23 +185,26 @@ const validateFarmer = (data) => {
 
 const validateFarm = (data) => {
   const errors = [];
-  
+
   if (!data.farmerId) {
     errors.push('Farmer ID is required');
   }
-  
-  if (!data.name || data.name.trim().length === 0) {
+
+  // Check both name and farmName to be flexible with frontend
+  if ((!data.name || data.name.trim().length === 0) && (!data.farmName || data.farmName.trim().length === 0)) {
     errors.push('Farm name is required');
   }
-  
+
   if (!data.location || data.location.trim().length === 0) {
     errors.push('Location is required');
   }
-  
-  if (!data.size || data.size <= 0) {
+
+  // Check both size and totalArea to be flexible with frontend
+  const sizeValue = data.totalArea || data.size;
+  if (!sizeValue || parseFloat(sizeValue) <= 0) {
     errors.push('Size must be greater than 0');
   }
-  
+
   return errors;
 };
 

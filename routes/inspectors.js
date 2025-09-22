@@ -90,13 +90,15 @@ router.get('/', async (req, res) => {
       params.push(status);
     }
 
+    const limitNum = Math.max(1, parseInt(limit) || 50);
+    const offsetNum = Math.max(0, parseInt(offset) || 0);
+
     const query = `
       SELECT * FROM inspectors
       ${whereClause}
       ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${limitNum} OFFSET ${offsetNum}
     `;
-    params.push(parseInt(limit), parseInt(offset));
 
     const inspectors = await db.query(query, params);
 
