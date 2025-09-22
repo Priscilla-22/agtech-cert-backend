@@ -67,7 +67,7 @@ async function runSimpleSchema() {
         idNumber VARCHAR(50) UNIQUE NOT NULL,
         dateOfBirth DATE,
         county VARCHAR(100) NOT NULL,
-        subCounty VARCHAR(100),
+        sub_county VARCHAR(100),
         ward VARCHAR(100),
         village VARCHAR(100),
         address TEXT,
@@ -93,19 +93,19 @@ async function runSimpleSchema() {
         expectations TEXT,
         status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
         notes TEXT,
-        registrationDate DATE NOT NULL,
+        registration_date DATE NOT NULL,
         totalFarms INT DEFAULT 0,
-        certificationStatus ENUM('pending', 'certified', 'expired', 'rejected') DEFAULT 'pending',
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        certification_status ENUM('pending', 'certified', 'expired', 'rejected') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_email (email),
         INDEX idx_phone (phone),
         INDEX idx_idNumber (idNumber),
         INDEX idx_county (county),
         INDEX idx_status (status),
-        INDEX idx_certificationStatus (certificationStatus),
+        INDEX idx_certification_status (certification_status),
         INDEX idx_memberNumber (memberNumber),
-        INDEX idx_registrationDate (registrationDate)
+        INDEX idx_registration_date (registration_date)
       )
     `);
     console.log('✅ Farmers table created with camelCase fields');
@@ -115,27 +115,27 @@ async function runSimpleSchema() {
     await connection.execute(`
       CREATE TABLE farms (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        farmerId INT NOT NULL,
-        farmName VARCHAR(255) NOT NULL,
+        farmer_id INT NOT NULL,
+        farm_name VARCHAR(255) NOT NULL,
         location TEXT NOT NULL,
-        totalArea DECIMAL(10, 2) COMMENT 'Total farm area in hectares',
-        organicArea DECIMAL(10, 2) COMMENT 'Organic farming area in hectares',
-        cropTypes JSON COMMENT 'Array of crops grown',
-        organicSince DATE COMMENT 'Date when organic farming started',
-        certificationStatus ENUM('pending', 'certified', 'expired', 'rejected') DEFAULT 'pending',
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (farmerId) REFERENCES farmers(id) ON DELETE CASCADE,
-        INDEX idx_farmerId (farmerId),
-        INDEX idx_certificationStatus (certificationStatus)
+        total_area DECIMAL(10, 2) COMMENT 'Total farm area in hectares',
+        organic_area DECIMAL(10, 2) COMMENT 'Organic farming area in hectares',
+        crop_types JSON COMMENT 'Array of crops grown',
+        organic_since DATE COMMENT 'Date when organic farming started',
+        certification_status ENUM('pending', 'certified', 'expired', 'rejected') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE,
+        INDEX idx_farmer_id (farmer_id),
+        INDEX idx_certification_status (certification_status)
       )
     `);
     console.log('✅ Farms table created');
 
-    console.log('\n🎉 Simple camelCase database schema created successfully!');
-    console.log('\n⚠️  Note: Backend queries need to use camelCase field names:');
-    console.log('  - Use registrationDate (not registration_date)');
-    console.log('  - Use farmerId (not farmer_id)');
+    console.log('\n🎉 Corrected snake_case database schema created successfully!');
+    console.log('\n✅ Schema now matches backend query expectations:');
+    console.log('  - registration_date column for ORDER BY clauses');
+    console.log('  - farmer_id column for farm relationships');
 
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

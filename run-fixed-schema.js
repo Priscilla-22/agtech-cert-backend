@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-async function runCorrectSchema() {
+async function runFixedSchema() {
   let connection;
   try {
     // Create connection
@@ -28,7 +28,7 @@ async function runCorrectSchema() {
     await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
     console.log('✅ Existing tables dropped');
 
-    // Create users table with SNAKE_CASE fields to match backend
+    // Create users table
     console.log('\n🔄 Creating users table...');
     await connection.execute(`
       CREATE TABLE users (
@@ -54,7 +54,7 @@ async function runCorrectSchema() {
     `);
     console.log('✅ Users table created');
 
-    // Create farmers table with EXACT field names the backend expects (snake_case)
+    // Create farmers table with BOTH camelCase and snake_case columns
     console.log('\n🔄 Creating farmers table...');
     await connection.execute(`
       CREATE TABLE farmers (
@@ -93,125 +93,81 @@ async function runCorrectSchema() {
         expectations TEXT,
         status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
         notes TEXT,
-        registration_date DATE NOT NULL,
+        registrationDate DATE NOT NULL,
         totalFarms INT DEFAULT 0,
         certificationStatus ENUM('pending', 'certified', 'expired', 'rejected') DEFAULT 'pending',
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+        -- Add real snake_case columns that mirror camelCase ones
+        sub_county VARCHAR(100) AS (subCounty) STORED,
+        farming_type ENUM('subsistence', 'commercial', 'mixed') AS (farmingType) STORED,
+        organic_experience ENUM('0-1', '2-3', '4-5', '6-10', '10+') AS (organicExperience) STORED,
+        education_level ENUM('primary', 'secondary', 'certificate', 'diploma', 'degree', 'postgraduate') AS (educationLevel) STORED,
+        total_land_size DECIMAL(10, 2) AS (totalLandSize) STORED,
+        certification_status ENUM('pending', 'certified', 'expired', 'rejected') AS (certificationStatus) STORED,
+        registration_date DATE AS (registrationDate) STORED,
+
         INDEX idx_email (email),
         INDEX idx_phone (phone),
         INDEX idx_idNumber (idNumber),
         INDEX idx_county (county),
         INDEX idx_status (status),
         INDEX idx_certificationStatus (certificationStatus),
-        INDEX idx_memberNumber (memberNumber)
+        INDEX idx_memberNumber (memberNumber),
+        INDEX idx_registrationDate (registrationDate),
+        INDEX idx_sub_county (sub_county),
+        INDEX idx_farming_type (farming_type),
+        INDEX idx_organic_experience (organic_experience),
+        INDEX idx_education_level (education_level),
+        INDEX idx_total_land_size (total_land_size),
+        INDEX idx_certification_status_snake (certification_status),
+        INDEX idx_registration_date_snake (registration_date)
       )
     `);
-    console.log('✅ Farmers table created');
+    console.log('✅ Farmers table created with both naming conventions');
 
-    // Create farms table with snake_case field names
+    // Create farms table
     console.log('\n🔄 Creating farms table...');
     await connection.execute(`
       CREATE TABLE farms (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        farmer_id INT NOT NULL,
-        farm_name VARCHAR(255) NOT NULL,
+        farmerId INT NOT NULL,
+        farmName VARCHAR(255) NOT NULL,
         location TEXT NOT NULL,
-        total_area DECIMAL(10, 2) COMMENT 'Total farm area in hectares',
-        organic_area DECIMAL(10, 2) COMMENT 'Organic farming area in hectares',
-        crop_types JSON COMMENT 'Array of crops grown',
-        organic_since DATE COMMENT 'Date when organic farming started',
-        certification_status ENUM('pending', 'certified', 'expired', 'rejected') DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE,
-        INDEX idx_farmer_id (farmer_id),
-        INDEX idx_certification_status (certification_status)
+        totalArea DECIMAL(10, 2) COMMENT 'Total farm area in hectares',
+        organicArea DECIMAL(10, 2) COMMENT 'Organic farming area in hectares',
+        cropTypes JSON COMMENT 'Array of crops grown',
+        organicSince DATE COMMENT 'Date when organic farming started',
+        certificationStatus ENUM('pending', 'certified', 'expired', 'rejected') DEFAULT 'pending',
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+        -- Add snake_case stored columns
+        farmer_id INT AS (farmerId) STORED,
+        farm_name VARCHAR(255) AS (farmName) STORED,
+        total_area DECIMAL(10, 2) AS (totalArea) STORED,
+        organic_area DECIMAL(10, 2) AS (organicArea) STORED,
+        crop_types JSON AS (cropTypes) STORED,
+        organic_since DATE AS (organicSince) STORED,
+        certification_status ENUM('pending', 'certified', 'expired', 'rejected') AS (certificationStatus) STORED,
+        created_at TIMESTAMP AS (createdAt) STORED,
+        updated_at TIMESTAMP AS (updatedAt) STORED,
+
+        FOREIGN KEY (farmerId) REFERENCES farmers(id) ON DELETE CASCADE,
+        INDEX idx_farmerId (farmerId),
+        INDEX idx_certificationStatus (certificationStatus),
+        INDEX idx_farmer_id (farmer_id)
       )
     `);
     console.log('✅ Farms table created');
 
-    // Create inspections table
-    console.log('\n🔄 Creating inspections table...');
-    await connection.execute(`
-      CREATE TABLE inspections (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        farm_id INT NOT NULL,
-        inspector_id INT,
-        inspection_date DATE NOT NULL,
-        status ENUM('scheduled', 'in_progress', 'completed', 'cancelled', 'approved', 'rejected') DEFAULT 'scheduled',
-        type ENUM('initial', 'annual', 'spot_check', 'follow_up') NOT NULL,
-        checklist JSON COMMENT 'Inspection checklist items and results',
-        findings TEXT,
-        recommendations TEXT,
-        notes TEXT,
-        violations JSON COMMENT 'Array of violations found during inspection',
-        score DECIMAL(5, 2) COMMENT 'Overall inspection score',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        updated_by VARCHAR(255) COMMENT 'User who last updated the inspection',
-        FOREIGN KEY (farm_id) REFERENCES farms(id) ON DELETE CASCADE,
-        FOREIGN KEY (inspector_id) REFERENCES users(id) ON DELETE SET NULL,
-        INDEX idx_farm_id (farm_id),
-        INDEX idx_inspector_id (inspector_id),
-        INDEX idx_inspection_date (inspection_date),
-        INDEX idx_status (status)
-      )
-    `);
-    console.log('✅ Inspections table created');
-
-    // Create certificates table
-    console.log('\n🔄 Creating certificates table...');
-    await connection.execute(`
-      CREATE TABLE certificates (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        certificate_number VARCHAR(100) UNIQUE NOT NULL,
-        farm_id INT NOT NULL,
-        issue_date DATE NOT NULL,
-        expiry_date DATE NOT NULL,
-        status ENUM('active', 'expired', 'revoked', 'suspended', 'renewal_pending') DEFAULT 'active',
-        certification_body VARCHAR(255) NOT NULL,
-        scope TEXT,
-        pdf_url VARCHAR(500),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (farm_id) REFERENCES farms(id) ON DELETE CASCADE,
-        INDEX idx_farm_id (farm_id),
-        INDEX idx_certificate_number (certificate_number),
-        INDEX idx_status (status),
-        INDEX idx_expiry_date (expiry_date)
-      )
-    `);
-    console.log('✅ Certificates table created');
-
-    // Create inspection_status_history table
-    console.log('\n🔄 Creating inspection status history table...');
-    await connection.execute(`
-      CREATE TABLE inspection_status_history (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        inspection_id INT NOT NULL,
-        old_status VARCHAR(50),
-        new_status VARCHAR(50) NOT NULL,
-        changed_by VARCHAR(255) COMMENT 'User who made the change',
-        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        reason TEXT COMMENT 'Reason for status change',
-        notes TEXT COMMENT 'Additional notes about the change',
-        FOREIGN KEY (inspection_id) REFERENCES inspections(id) ON DELETE CASCADE,
-        INDEX idx_inspection_id (inspection_id),
-        INDEX idx_changed_at (changed_at),
-        INDEX idx_new_status (new_status)
-      )
-    `);
-    console.log('✅ Inspection status history table created');
-
-    console.log('\n🎉 CORRECT database schema created successfully!');
-    console.log('\n📊 Tables created with proper field names:');
-    console.log('  - users');
-    console.log('  - farmers (registration_date, not registrationDate)');
-    console.log('  - farms (farmer_id, not farmerId)');
-    console.log('  - inspections');
-    console.log('  - certificates');
-    console.log('  - inspection_status_history');
+    console.log('\n🎉 Fixed database schema created successfully!');
+    console.log('\n📊 Features:');
+    console.log('  - Primary fields use camelCase (for INSERT statements)');
+    console.log('  - STORED snake_case fields (for SELECT queries)');
+    console.log('  - registration_date column available for ORDER BY');
+    console.log('  - farmer_id column available for farm queries');
 
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
@@ -225,4 +181,4 @@ async function runCorrectSchema() {
 }
 
 // Run the migration
-runCorrectSchema();
+runFixedSchema();

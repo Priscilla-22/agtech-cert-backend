@@ -271,14 +271,17 @@ router.get('/', async (req, res) => {
     }
     farmersQuery += ` ORDER BY registration_date DESC LIMIT ? OFFSET ?`;
 
-    const farmers = await dbConfig.executeQuery(farmersQuery, [...params, parseInt(limit), parseInt(offset)]);
+    const limitNum = Math.max(1, parseInt(limit) || 50);
+    const offsetNum = Math.max(0, parseInt(offset) || 0);
+
+    const farmers = await dbConfig.executeQuery(farmersQuery, [...params, limitNum, offsetNum]);
     const mappedFarmers = farmers.map(farmer => db.mapFieldsFromDatabase(farmer));
 
     res.json({
       data: mappedFarmers,
       total,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: limitNum,
+      offset: offsetNum,
       filters: req.query // Return applied filters for reference
     });
   } catch (error) {
@@ -479,7 +482,7 @@ router.post('/', async (req, res) => {
     };
 
     // Create farmer first
-    const farmer = await db.create('farmers', farmerData);
+    const farmer = await db.Farmer.create(farmerData);
 
     // Prepare farm data (farm-specific fields)
     const farmData = {
