@@ -182,6 +182,54 @@ const validateFarmer = (data) => {
   return errors;
 };
 
+const validateFarmerUpdate = (data) => {
+  const errors = [];
+
+  // For updates, only validate fields that are provided and need validation
+
+  if (data.email && !isValidEmail(data.email)) {
+    errors.push('Valid email is required');
+  }
+
+  if (data.educationLevel && !['primary', 'secondary', 'certificate', 'diploma', 'degree', 'postgraduate'].includes(data.educationLevel)) {
+    errors.push('Education level must be one of: primary, secondary, certificate, diploma, degree, postgraduate');
+  }
+
+  if (data.farmingExperience && !['0-2', '3-5', '6-10', '11-20', '20+'].includes(data.farmingExperience)) {
+    errors.push('Farming experience must be one of: 0-2, 3-5, 6-10, 11-20, 20+');
+  }
+
+  if (data.farmingType && !['subsistence', 'commercial', 'mixed'].includes(data.farmingType)) {
+    errors.push('Farming type must be subsistence, commercial, or mixed');
+  }
+
+  if (data.totalLandSize && parseFloat(data.totalLandSize) <= 0) {
+    errors.push('Total land size must be greater than 0');
+  }
+
+  if (data.landTenure && !['owned', 'leased', 'communal', 'family'].includes(data.landTenure)) {
+    errors.push('Land tenure must be owned, leased, communal, or family');
+  }
+
+  if (data.soilType && !['clay', 'sandy', 'loam', 'volcanic', 'black cotton'].includes(data.soilType)) {
+    errors.push('Soil type must be one of: clay, sandy, loam, volcanic, black cotton');
+  }
+
+  if (data.irrigationSystem && !['none', 'drip', 'sprinkler', 'furrow', 'flood'].includes(data.irrigationSystem)) {
+    errors.push('Irrigation system must be one of: none, drip, sprinkler, furrow, flood');
+  }
+
+  if (data.previousCertification && !['yes', 'no', 'transitioning'].includes(data.previousCertification)) {
+    errors.push('Previous certification status must be yes, no, or transitioning');
+  }
+
+  if (data.organicExperience && !['0-1', '2-3', '4-5', '6-10', '10+'].includes(data.organicExperience)) {
+    errors.push('Organic farming experience must be one of: 0-1, 2-3, 4-5, 6-10, 10+');
+  }
+
+  return errors;
+};
+
 const validateFarm = (data) => {
   const errors = [];
 
@@ -277,6 +325,7 @@ const isValidEmail = (email) => {
 
 module.exports = {
   validateFarmer,
+  validateFarmerUpdate,
   validateFarm,
   validateFarmUpdate,
   validateField,

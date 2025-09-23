@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const dbConfig = require('../config/database');
-const { validateFarmer, getUserFriendlyError } = require('../utils/validation');
+const { validateFarmer, validateFarmerUpdate, getUserFriendlyError } = require('../utils/validation');
 
 const generateMemberNumber = () => {
   const timestamp = Date.now().toString(36).slice(-3).toUpperCase();
@@ -603,7 +603,7 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   try {
-    const errors = validateFarmer(req.body);
+    const errors = validateFarmerUpdate(req.body);
     if (errors.length > 0) {
       return res.status(400).json({ errors });
     }
