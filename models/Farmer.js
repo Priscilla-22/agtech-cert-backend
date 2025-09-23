@@ -18,7 +18,6 @@ class Farmer {
       member_number: memberNumber,
       email: data.email,
       phone: data.phone,
-      alternate_phone: data.alternatePhone,
       id_number: data.idNumber,
       date_of_birth: data.dateOfBirth,
       county: data.county,
@@ -71,9 +70,6 @@ class Farmer {
 
     Object.entries(data).forEach(([key, value]) => {
       switch (key) {
-        case 'alternatePhone':
-          updateData.alternate_phone = value;
-          break;
         case 'idNumber':
           updateData.id_number = value;
           break;
@@ -179,7 +175,6 @@ class Farmer {
       memberNumber: data.member_number,
       email: data.email,
       phone: data.phone,
-      alternatePhone: data.alternate_phone,
       idNumber: data.id_number,
       dateOfBirth: data.date_of_birth,
       county: data.county,

@@ -468,7 +468,6 @@ router.post('/', async (req, res) => {
       name: req.body.name,
       email: req.body.email,
       phone: req.body.phone,
-      alternatePhone: req.body.alternatePhone || '',
       idNumber: req.body.idNumber,
       dateOfBirth: req.body.dateOfBirth,
 
