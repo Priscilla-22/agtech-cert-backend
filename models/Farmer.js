@@ -22,8 +22,6 @@ class Farmer {
       ward: data.ward,
       village: data.village,
       address: data.address,
-      latitude: data.latitude,
-      longitude: data.longitude,
       farmingExperience: data.farmingExperience,
       educationLevel: data.educationLevel,
       agriculturalTraining: data.agriculturalTraining,

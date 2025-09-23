@@ -18,7 +18,7 @@ const getUserFriendlyError = (validationErrors) => {
     'Total land size must be greater than 0': 'Please enter total land size (must be greater than 0)',
     'Cultivated land size must be 0 or greater': 'Please enter cultivated land size',
     'Cultivated land size cannot exceed total land size': 'Cultivated area cannot be larger than total land size',
-    'Land tenure must be owned, leased, leasehold, communal, or family': 'Please select how the land is owned',
+    'Land tenure must be owned, leased, communal, or family': 'Please select how the land is owned',
     'Soil type is required': 'Please enter the soil type',
     'At least one water source must be selected': 'Please select at least one water source',
     'Previous certification status must be yes, no, or expired': 'Please specify previous certification status',
@@ -142,8 +142,8 @@ const validateFarmer = (data) => {
     errors.push('Cultivated land size cannot exceed total land size');
   }
 
-  if (!data.landTenure || !['owned', 'leased', 'leasehold', 'communal', 'family'].includes(data.landTenure)) {
-    errors.push('Land tenure must be owned, leased, leasehold, communal, or family');
+  if (!data.landTenure || !['owned', 'leased', 'communal', 'family'].includes(data.landTenure)) {
+    errors.push('Land tenure must be owned, leased, communal, or family');
   }
 
   if (!data.soilType || data.soilType.trim().length === 0) {
