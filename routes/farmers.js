@@ -608,7 +608,7 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ errors });
     }
 
-    const farmer = await db.update('farmers', parseInt(req.params.id), req.body);
+    const farmer = await db.Farmer.update(parseInt(req.params.id), req.body);
     if (!farmer) {
       return res.status(404).json({ error: 'Farmer not found' });
     }
