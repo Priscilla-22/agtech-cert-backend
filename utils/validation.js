@@ -207,6 +207,29 @@ const validateFarm = (data) => {
   return errors;
 };
 
+const validateFarmUpdate = (data) => {
+  const errors = [];
+
+  // For updates, farmerId is not required since it shouldn't change
+
+  // Check both name and farmName to be flexible with frontend
+  if ((!data.name || data.name.trim().length === 0) && (!data.farmName || data.farmName.trim().length === 0)) {
+    errors.push('Farm name is required');
+  }
+
+  if (!data.location || data.location.trim().length === 0) {
+    errors.push('Location is required');
+  }
+
+  // Check both size and totalArea to be flexible with frontend
+  const sizeValue = data.totalArea || data.size;
+  if (!sizeValue || parseFloat(sizeValue) <= 0) {
+    errors.push('Size must be greater than 0');
+  }
+
+  return errors;
+};
+
 const validateField = (data) => {
   const errors = [];
   
@@ -255,6 +278,7 @@ const isValidEmail = (email) => {
 module.exports = {
   validateFarmer,
   validateFarm,
+  validateFarmUpdate,
   validateField,
   validateInspection,
   getUserFriendlyError

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const dbConfig = require('../config/database');
-const { validateFarm } = require('../utils/validation');
+const { validateFarm, validateFarmUpdate } = require('../utils/validation');
 
 /**
  * @swagger
@@ -377,7 +377,7 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   try {
-    const errors = validateFarm(req.body);
+    const errors = validateFarmUpdate(req.body);
     if (errors.length > 0) {
       return res.status(400).json({ errors });
     }
