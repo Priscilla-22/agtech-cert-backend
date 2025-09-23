@@ -82,9 +82,6 @@ router.post('/register', authenticateToken, async (req, res) => {
     const { name, phone, address } = req.body;
     const { uid, email, emailVerified } = req.user;
 
-    if (!emailVerified) {
-      return res.status(400).json({ error: 'Email must be verified to complete registration' });
-    }
 
     // Check if user already exists
     const existingUser = db.findBy('users', { uid });
