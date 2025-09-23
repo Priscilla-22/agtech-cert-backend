@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const Inspection = require('../models/Inspection');
+const Certificate = require('../models/Certificate');
 const { validateInspection } = require('../utils/validation');
 const { CHECKLIST_QUESTIONS, createChecklist, calculateComplianceScore, isEligibleForCertification, validateChecklist, isChecklistComplete } = require('../utils/inspection');
 const { generateCertificateNumber, calculateExpiryDate, generateCertificatePDF } = require('../utils/pdfGenerator');
@@ -437,21 +438,15 @@ router.put('/:id', async (req, res) => {
             });
 
             const certificateData = {
-              farm_id: inspection.farm_id,
-              certificate_number: certificateNo,
-              issue_date: issueDate,
-              expiry_date: expiryDate,
+              farmId: inspection.farm_id,
+              issueDate: issueDate,
+              expiryDate: expiryDate,
               status: 'active',
-              certification_body: 'Kenya Organic Agriculture Network',
-              scope: 'Organic crop production',
-              crop_types: farm.crop_types || JSON.stringify([]),
-              pdf_url: pdfResult.pdfUrl,
-              issued_by: null,
-              created_at: new Date(),
-              updated_at: new Date()
+              certificationBody: 'Kenya Organic Agriculture Network',
+              scope: 'Organic crop production'
             };
 
-            generatedCertificate = await db.create('certificates', certificateData);
+            generatedCertificate = await Certificate.create(certificateData);
             certificateGenerated = true;
 
             console.log(`Certificate automatically generated for inspection ${req.params.id} with score ${req.body.score || updateData.complianceScore}`);
@@ -587,25 +582,19 @@ router.post('/:id/approve', async (req, res) => {
     const expiryDate = calculateExpiryDate(issueDate);
 
     const certificateData = {
-      farm_id: inspection.farm_id,
-      certificate_number: certificateNo,
-      issue_date: issueDate,
-      expiry_date: expiryDate,
+      farmId: inspection.farm_id,
+      issueDate: issueDate,
+      expiryDate: expiryDate,
       status: 'active',
-      certification_body: 'Kenya Organic Agriculture Network',
-      scope: 'Organic crop production',
-      crop_types: farm.crop_types || JSON.stringify([]),
-      pdf_url: null, // Will be set after PDF generation
-      issued_by: null,
-      created_at: new Date(),
-      updated_at: new Date()
+      certificationBody: 'Kenya Organic Agriculture Network',
+      scope: 'Organic crop production'
     };
 
     // Generate PDF certificate using PDFService
     const pdfBuffer = await PDFService.generateCertificatePDF(certificateData, farm, farmer);
 
-    // Save certificate to database
-    const certificate = await db.create('certificates', certificateData);
+    // Save certificate to database using Certificate model
+    const certificate = await Certificate.create(certificateData);
 
     // Set response headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
