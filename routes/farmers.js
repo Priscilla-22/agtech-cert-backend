@@ -415,14 +415,25 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
+    console.log('=== FARMER CREATION DEBUG ===');
+    console.log('Received payload:', JSON.stringify(req.body, null, 2));
+    console.log('landTenure value:', req.body.landTenure);
+    console.log('organicExperience value:', req.body.organicExperience);
+
     const errors = validateFarmer(req.body);
+    console.log('Validation errors:', errors);
+
     if (errors.length > 0) {
       const friendlyErrors = getUserFriendlyError(errors);
+      console.error('Farmer validation failed:', errors);
       return res.status(400).json({
         errors: friendlyErrors,
+        originalErrors: errors,
         message: 'Please fix the following issues and try again:'
       });
     }
+
+    console.log('Validation passed, proceeding with farmer creation...');
 
     // Calculate total and cultivated land size from frontend fields
     let totalLandSize = parseFloat(req.body.totalLandSize);

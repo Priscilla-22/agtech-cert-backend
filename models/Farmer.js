@@ -10,8 +10,12 @@ class Farmer {
   }
 
   static async create(data) {
+    // Generate member number if not provided
+    const memberNumber = data.memberNumber || await this.generateMemberNumber();
+
     const farmerData = {
       name: data.name,
+      member_number: memberNumber,
       email: data.email,
       phone: data.phone,
       alternatePhone: data.alternatePhone,
@@ -130,6 +134,9 @@ class Farmer {
         case 'certificationStatus':
           updateData.certification_status = value;
           break;
+        case 'memberNumber':
+          updateData.member_number = value;
+          break;
         default:
           updateData[key] = value;
       }
@@ -144,12 +151,32 @@ class Farmer {
     return await db.delete('farmers', id);
   }
 
+  static async generateMemberNumber() {
+    // Get the current year
+    const currentYear = new Date().getFullYear();
+
+    // Get the count of farmers created this year to generate sequential number
+    const query = `
+      SELECT COUNT(*) as count
+      FROM farmers
+      WHERE member_number LIKE 'MEMBER-${currentYear}-%'
+    `;
+
+    const result = await db.query(query);
+    const count = result[0].count || 0;
+
+    // Generate member number: MEMBER-YYYY-XXXX (4-digit sequential)
+    const sequentialNumber = String(count + 1).padStart(4, '0');
+    return `MEMBER-${currentYear}-${sequentialNumber}`;
+  }
+
   static mapFromDatabase(data) {
     if (!data) return null;
 
     const mapped = {
       id: data.id,
       name: data.name,
+      memberNumber: data.member_number,
       email: data.email,
       phone: data.phone,
       alternatePhone: data.alternate_phone,

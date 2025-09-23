@@ -103,6 +103,65 @@ router.get('/', async (req, res) => {
 
 /**
  * @swagger
+ * /api/farms/farmer/{farmerId}:
+ *   get:
+ *     summary: Get farms by farmer ID
+ *     description: Retrieve all farms belonging to a specific farmer
+ *     tags: [Farms]
+ *     parameters:
+ *       - in: path
+ *         name: farmerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique farmer identifier
+ *     responses:
+ *       200:
+ *         description: Farms retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Farm'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
+router.get('/farmer/:farmerId', async (req, res) => {
+  try {
+    const farmerId = parseInt(req.params.farmerId);
+
+    // Verify farmer exists
+    const farmer = await db.findById('farmers', farmerId);
+    if (!farmer) {
+      return res.status(404).json({ error: 'Farmer not found' });
+    }
+
+    // Get all farms for this farmer
+    const farms = await db.findBy('farms', { farmer_id: farmerId });
+
+    // Enrich with farmer data and field count
+    const enrichedFarms = await Promise.all(farms.map(async (farm) => {
+      const fields = await db.findBy('fields', { farm_id: farm.id });
+      const mappedFarm = db.mapFieldsFromDatabase(farm);
+      return {
+        ...mappedFarm,
+        farmerName: farmer.name,
+        totalFields: fields.length
+      };
+    }));
+
+    res.json(enrichedFarms);
+  } catch (error) {
+    console.error('Error fetching farms by farmer ID:', error);
+    res.status(500).json({ error: 'Failed to fetch farms' });
+  }
+});
+
+/**
+ * @swagger
  * /api/farms/{id}:
  *   get:
  *     summary: Get farm by ID
