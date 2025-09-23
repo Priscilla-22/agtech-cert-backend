@@ -12,7 +12,7 @@ const getUserFriendlyError = (validationErrors) => {
     'Village is required': 'Please enter the village name',
     'Physical address is required': 'Please provide a physical address',
     'Farming experience is required': 'Please select farming experience level',
-    'Education level is required': 'Please select education level',
+    'Education level must be one of: primary, secondary, certificate, diploma, degree, postgraduate': 'Please select a valid education level',
     'At least one primary crop must be selected': 'Please select at least one primary crop',
     'Farming type must be subsistence, commercial, or mixed': 'Please select a valid farming type',
     'Total land size must be greater than 0': 'Please enter total land size (must be greater than 0)',
@@ -100,8 +100,9 @@ const validateFarmer = (data) => {
     errors.push('Years in farming must be one of: 0-2, 3-5, 6-10, 11-20, 20+');
   }
 
-  if (!data.educationLevel || data.educationLevel.trim().length === 0) {
-    errors.push('Education level is required');
+  const validEducationLevels = ['primary', 'secondary', 'certificate', 'diploma', 'degree', 'postgraduate'];
+  if (!data.educationLevel || !validEducationLevels.includes(data.educationLevel)) {
+    errors.push('Education level must be one of: primary, secondary, certificate, diploma, degree, postgraduate');
   }
 
   if (!data.primaryCrops || !Array.isArray(data.primaryCrops) || data.primaryCrops.length === 0) {
@@ -146,8 +147,9 @@ const validateFarmer = (data) => {
     errors.push('Land tenure must be owned, leased, communal, or family');
   }
 
-  if (!data.soilType || data.soilType.trim().length === 0) {
-    errors.push('Soil type is required');
+  const validSoilTypes = ['clay', 'sandy', 'loam', 'volcanic', 'black cotton'];
+  if (!data.soilType || !validSoilTypes.includes(data.soilType)) {
+    errors.push('Soil type must be one of: clay, sandy, loam, volcanic, black cotton');
   }
 
   if (!data.waterSources || !Array.isArray(data.waterSources) || data.waterSources.length === 0) {
@@ -155,16 +157,13 @@ const validateFarmer = (data) => {
   }
 
   // Step 5: Certification Status
-  if (!data.previousCertification || !['yes', 'no', 'expired'].includes(data.previousCertification)) {
-    errors.push('Previous certification status must be yes, no, or expired');
+  if (!data.previousCertification || !['yes', 'no', 'transitioning'].includes(data.previousCertification)) {
+    errors.push('Previous certification status must be yes, no, or transitioning');
   }
 
-  // Handle organic experience - can be string or number
-  const validOrganicExperienceValues = ['0-1', '2-3', '4-5', '6-10', '10+', 'beginner', 'intermediate', 'advanced'];
-  if (!data.organicExperience ||
-      (typeof data.organicExperience === 'string' && !validOrganicExperienceValues.includes(data.organicExperience)) ||
-      (typeof data.organicExperience === 'number' && (isNaN(data.organicExperience) || data.organicExperience < 0))) {
-    errors.push('Organic farming experience must be a valid value (0-1, 2-3, 4-5, 6-10, 10+, beginner, intermediate, or advanced)');
+  const validOrganicExperienceValues = ['0-1', '2-3', '4-5', '6-10', '10+'];
+  if (!data.organicExperience || !validOrganicExperienceValues.includes(data.organicExperience)) {
+    errors.push('Organic farming experience must be one of: 0-1, 2-3, 4-5, 6-10, 10+');
   }
 
   // Make motivation optional since frontend sends motivationForOrganic as empty
