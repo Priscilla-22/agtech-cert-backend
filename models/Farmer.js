@@ -71,58 +71,58 @@ class Farmer {
     Object.entries(data).forEach(([key, value]) => {
       switch (key) {
         case 'idNumber':
-          updateData.id_number = value;
+          updateData.idNumber = value;
           break;
         case 'dateOfBirth':
-          updateData.date_of_birth = value;
+          updateData.dateOfBirth = value;
           break;
         case 'subCounty':
           updateData.sub_county = value;
           break;
         case 'farmingExperience':
-          updateData.farming_experience = value;
+          updateData.farmingExperience = value;
           break;
         case 'educationLevel':
-          updateData.education_level = value;
+          updateData.educationLevel = value;
           break;
         case 'agriculturalTraining':
-          updateData.agricultural_training = value;
+          updateData.agriculturalTraining = value;
           break;
         case 'primaryCrops':
-          updateData.primary_crops = JSON.stringify(value);
+          updateData.primaryCrops = JSON.stringify(value);
           break;
         case 'farmingType':
-          updateData.farming_type = value;
+          updateData.farmingType = value;
           break;
         case 'totalLandSize':
-          updateData.total_land_size = value;
+          updateData.totalLandSize = value;
           break;
         case 'cultivatedSize':
-          updateData.cultivated_size = value;
+          updateData.cultivatedSize = value;
           break;
         case 'landTenure':
-          updateData.land_tenure = value;
+          updateData.landTenure = value;
           break;
         case 'soilType':
-          updateData.soil_type = value;
+          updateData.soilType = value;
           break;
         case 'waterSources':
-          updateData.water_sources = JSON.stringify(value);
+          updateData.waterSources = JSON.stringify(value);
           break;
         case 'irrigationSystem':
-          updateData.irrigation_system = value;
+          updateData.irrigationSystem = value;
           break;
         case 'previousCertification':
-          updateData.previous_certification = value;
+          updateData.previousCertification = value;
           break;
         case 'certifyingBody':
-          updateData.certifying_body = value;
+          updateData.certifyingBody = value;
           break;
         case 'certificationExpiry':
-          updateData.certification_expiry = value;
+          updateData.certificationExpiry = value;
           break;
         case 'organicExperience':
-          updateData.organic_experience = value;
+          updateData.organicExperience = value;
           break;
         case 'registrationDate':
           updateData.registration_date = value;
@@ -175,44 +175,53 @@ class Farmer {
       memberNumber: data.member_number,
       email: data.email,
       phone: data.phone,
-      idNumber: data.id_number,
-      dateOfBirth: data.date_of_birth,
+      idNumber: data.idNumber,
+      dateOfBirth: data.dateOfBirth,
       county: data.county,
       subCounty: data.sub_county,
-      farmingExperience: data.farming_experience,
-      educationLevel: data.education_level,
-      agriculturalTraining: data.agricultural_training,
-      farmingType: data.farming_type,
-      totalLandSize: data.total_land_size,
-      cultivatedSize: data.cultivated_size,
-      landTenure: data.land_tenure,
-      soilType: data.soil_type,
-      irrigationSystem: data.irrigation_system,
-      previousCertification: data.previous_certification,
-      certifyingBody: data.certifying_body,
-      certificationExpiry: data.certification_expiry,
-      organicExperience: data.organic_experience,
+      ward: data.ward,
+      village: data.village,
+      address: data.address,
+      farmingExperience: data.farmingExperience,
+      educationLevel: data.educationLevel,
+      agriculturalTraining: data.agriculturalTraining,
+      farmingType: data.farmingType,
+      totalLandSize: data.totalLandSize,
+      cultivatedSize: data.cultivatedSize,
+      landTenure: data.landTenure,
+      soilType: data.soilType,
+      irrigationSystem: data.irrigationSystem,
+      previousCertification: data.previousCertification,
+      certifyingBody: data.certifyingBody,
+      certificationExpiry: data.certificationExpiry,
+      organicExperience: data.organicExperience,
+      motivation: data.motivation,
+      challenges: data.challenges,
+      expectations: data.expectations,
+      status: data.status,
+      notes: data.notes,
       registrationDate: data.registration_date,
+      totalFarms: data.totalFarms,
       certificationStatus: data.certification_status,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
 
-    if (data.primary_crops) {
+    if (data.primaryCrops) {
       try {
-        mapped.primaryCrops = typeof data.primary_crops === 'string'
-          ? JSON.parse(data.primary_crops)
-          : data.primary_crops;
+        mapped.primaryCrops = typeof data.primaryCrops === 'string'
+          ? JSON.parse(data.primaryCrops)
+          : data.primaryCrops;
       } catch (e) {
         mapped.primaryCrops = [];
       }
     }
 
-    if (data.water_sources) {
+    if (data.waterSources) {
       try {
-        mapped.waterSources = typeof data.water_sources === 'string'
-          ? JSON.parse(data.water_sources)
-          : data.water_sources;
+        mapped.waterSources = typeof data.waterSources === 'string'
+          ? JSON.parse(data.waterSources)
+          : data.waterSources;
       } catch (e) {
         mapped.waterSources = [];
       }
