@@ -447,15 +447,6 @@ router.post('/', async (req, res) => {
 
     cultivatedSize = parseFloat(cultivatedSize) || 0;
 
-    // Handle GPS coordinates from frontend
-    let latitude = null, longitude = null;
-    if (req.body.gpsCoordinates && req.body.gpsCoordinates.trim()) {
-      const coords = req.body.gpsCoordinates.split(',');
-      if (coords.length === 2) {
-        latitude = parseFloat(coords[0].trim()) || null;
-        longitude = parseFloat(coords[1].trim()) || null;
-      }
-    }
 
     // Separate farmer data (only farmer-specific fields)
     const farmerData = {
@@ -476,8 +467,6 @@ router.post('/', async (req, res) => {
       ward: req.body.ward,
       village: req.body.village,
       address: req.body.address,
-      latitude: latitude,
-      longitude: longitude,
 
       // Step 3: Farming Background
       farmingExperience: req.body.farmingExperience || req.body.yearsInFarming,
