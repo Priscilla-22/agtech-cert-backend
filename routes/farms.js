@@ -87,7 +87,7 @@ router.get('/', async (req, res) => {
     const enrichedFarms = await Promise.all(farms.map(async (farm) => {
       const farmer = await db.findById('farmers', farm.farmer_id);
       const fields = await db.findBy('fields', { farm_id: farm.id });
-      const mappedFarm = db.mapFieldsFromDatabase(farm);
+      const mappedFarm = Farm.mapFromDatabase(farm);
       return {
         ...mappedFarm,
         farmerName: farmer ? farmer.name : 'Unknown',
@@ -146,7 +146,7 @@ router.get('/farmer/:farmerId', async (req, res) => {
     // Enrich with farmer data and field count
     const enrichedFarms = await Promise.all(farms.map(async (farm) => {
       const fields = await db.findBy('fields', { farm_id: farm.id });
-      const mappedFarm = db.mapFieldsFromDatabase(farm);
+      const mappedFarm = Farm.mapFromDatabase(farm);
       return {
         ...mappedFarm,
         farmerName: farmer.name,
@@ -213,7 +213,7 @@ router.get('/:id', async (req, res) => {
     const inspections = await db.findBy('inspections', { farm_id: farm.id });
     const certificates = await db.findBy('certificates', { farm_id: farm.id });
 
-    const mappedFarm = db.mapFieldsFromDatabase(farm);
+    const mappedFarm = Farm.mapFromDatabase(farm);
     const mappedFarmer = farmer ? db.mapFieldsFromDatabase(farmer) : null;
     const mappedFields = fields.map(field => db.mapFieldsFromDatabase(field));
     const mappedInspections = inspections.map(inspection => db.mapFieldsFromDatabase(inspection));
@@ -334,7 +334,7 @@ router.post('/', async (req, res) => {
     const farmerFarms = await db.findBy('farms', { farmer_id: farmer.id });
     await db.update('farmers', farmer.id, { totalFarms: farmerFarms.length });
 
-    const mappedFarm = db.mapFieldsFromDatabase(farm);
+    const mappedFarm = Farm.mapFromDatabase(farm);
     res.status(201).json(mappedFarm);
   } catch (error) {
     console.error('Error creating farm:', error);
@@ -403,7 +403,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Farm not found after update' });
     }
 
-    const mappedFarm = db.mapFieldsFromDatabase(farm);
+    const mappedFarm = Farm.mapFromDatabase(farm);
     res.json(mappedFarm);
   } catch (error) {
     console.error('Error updating farm:', error);

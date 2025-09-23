@@ -40,6 +40,7 @@ class Farm {
     if (data.cropTypes) updateData.crop_types = JSON.stringify(data.cropTypes);
     if (data.farmingType) updateData.farming_type = data.farmingType;
     if (data.organicSince) updateData.organic_since = data.organicSince;
+    if (data.certificationStatus) updateData.certification_status = data.certificationStatus;
 
     updateData.updated_at = new Date();
 
@@ -62,6 +63,7 @@ class Farm {
       organicArea: data.organic_area,
       farmingType: data.farming_type,
       organicSince: data.organic_since,
+      certificationStatus: data.certification_status || 'pending',
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };

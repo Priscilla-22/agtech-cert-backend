@@ -237,6 +237,11 @@ router.post('/', async (req, res) => {
       return res.status(500).json({ error: 'Failed to create certificate' });
     }
 
+    // Update farm certification status to 'certified'
+    await Farm.update(parseInt(farmId), {
+      certificationStatus: 'certified'
+    });
+
     const farmer = await Farmer.findById(farm.farmer_id);
     const mappedCertificate = Certificate.mapFromDatabase(certificate);
 
