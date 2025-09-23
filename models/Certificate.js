@@ -22,7 +22,6 @@ class Certificate {
       status: data.status || 'active',
       certification_body: data.certificationBody || 'Kenya Organic Agriculture Network',
       scope: data.scope || 'Organic crop production',
-      crop_types: JSON.stringify(data.cropTypes || []),
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -35,8 +34,7 @@ class Certificate {
 
     if (data.status) updateData.status = data.status;
     if (data.pdfUrl) updateData.pdf_url = data.pdfUrl;
-    // Removed notes field since it doesn't exist in the database schema
-    if (data.cropTypes) updateData.crop_types = JSON.stringify(data.cropTypes);
+    // Removed notes field and crop_types since they don't exist in the database schema
 
     updateData.updated_at = new Date();
 
@@ -71,15 +69,7 @@ class Certificate {
       updatedAt: data.updated_at
     };
 
-    if (data.crop_types) {
-      try {
-        mapped.cropTypes = typeof data.crop_types === 'string'
-          ? JSON.parse(data.crop_types)
-          : data.crop_types;
-      } catch (e) {
-        mapped.cropTypes = [];
-      }
-    }
+    // crop_types field removed since it doesn't exist in database schema
 
     return mapped;
   }
