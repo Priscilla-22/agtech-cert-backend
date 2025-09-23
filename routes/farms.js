@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
+const Farm = require('../models/Farm');
 const dbConfig = require('../config/database');
 const { validateFarm, validateFarmUpdate } = require('../utils/validation');
 
@@ -382,6 +383,7 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ errors });
     }
 
+
     console.log('Updating farm with ID:', req.params.id);
     console.log('Update data:', req.body);
 
@@ -394,7 +396,7 @@ router.put('/:id', async (req, res) => {
 
     console.log('Existing farm found:', existingFarm);
 
-    const farm = await db.Farm.update(parseInt(req.params.id), req.body);
+    const farm = await Farm.update(parseInt(req.params.id), req.body);
     console.log('Update result:', farm);
 
     if (!farm) {
