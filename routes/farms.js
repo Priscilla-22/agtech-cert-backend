@@ -384,7 +384,7 @@ router.put('/:id', async (req, res) => {
     }
 
 
-    console.log('Updating farm with ID:', req.params.id);
+    console.log('FIXED VERSION - Updating farm with ID:', req.params.id);
     console.log('Update data:', req.body);
 
     // First check if farm exists
