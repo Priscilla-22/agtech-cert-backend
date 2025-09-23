@@ -382,9 +382,23 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ errors });
     }
 
-    const farm = await db.update('farms', parseInt(req.params.id), req.body);
-    if (!farm) {
+    console.log('Updating farm with ID:', req.params.id);
+    console.log('Update data:', req.body);
+
+    // First check if farm exists
+    const existingFarm = await db.findById('farms', parseInt(req.params.id));
+    if (!existingFarm) {
+      console.log('Farm not found with ID:', req.params.id);
       return res.status(404).json({ error: 'Farm not found' });
+    }
+
+    console.log('Existing farm found:', existingFarm);
+
+    const farm = await db.Farm.update(parseInt(req.params.id), req.body);
+    console.log('Update result:', farm);
+
+    if (!farm) {
+      return res.status(404).json({ error: 'Farm not found after update' });
     }
 
     const mappedFarm = db.mapFieldsFromDatabase(farm);
