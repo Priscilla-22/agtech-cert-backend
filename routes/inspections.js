@@ -308,12 +308,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
  */
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    // SECURITY: Only allow creating inspections for farms belonging to current user
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     const errors = validateInspection(req.body);
     if (errors.length > 0) {
       return res.status(400).json({ errors });
     }
 
-    // Verify farm exists
+    // Verify farm exists and belongs to current user
     const farm = await db.findById('farms', parseInt(req.body.farmId));
     if (!farm) {
       return res.status(400).json({ error: 'Farm not found' });
@@ -322,6 +327,11 @@ router.post('/', authenticateToken, async (req, res) => {
     const farmer = await db.findById('farmers', farm.farmer_id);
     if (!farmer) {
       return res.status(400).json({ error: 'Farmer not found' });
+    }
+
+    // SECURITY: Verify the farmer belongs to the current user
+    if (farmer.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You can only create inspections for your own farms' });
     }
 
     const checklist = req.body.checklist || createChecklist();
