@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
-const { testConnection, ensureUserIdColumn } = require('./config/database');
+const { sequelize } = require('./models');
 require('dotenv').config();
 
 const app = express();
@@ -82,17 +82,11 @@ app.use((req, res) => {
 // Initialize database connection and start server
 async function startServer() {
   try {
-    // Test database connection
-    const dbConnected = await testConnection();
+    await sequelize.authenticate();
+    console.log('Database connected successfully');
 
-    if (!dbConnected) {
-      console.log('Server starting without database connection');
-      console.log('Please check your MySQL configuration in .env file');
-    } else {
-      // Run migration to ensure user_id column exists
-      console.log('Running database migrations...');
-      await ensureUserIdColumn();
-    }
+    await sequelize.sync();
+    console.log('Database synchronized');
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

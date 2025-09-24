@@ -1,5 +1,5 @@
 const { auth } = require('../config/firebase');
-const db = require('../models');
+const { User } = require('../models');
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -18,8 +18,7 @@ const authenticateToken = async (req, res, next) => {
     const decodedToken = await auth.verifyIdToken(token);
 
     // Get the user record from our database to include the internal user ID
-    const users = await db.findBy('users', { uid: decodedToken.uid });
-    const dbUser = users.length > 0 ? users[0] : null;
+    const dbUser = await User.findOne({ where: { uid: decodedToken.uid } });
 
     req.user = {
       uid: decodedToken.uid,
