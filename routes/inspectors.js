@@ -81,13 +81,18 @@ const { authenticateToken } = require('../middleware/auth');
  */
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    // SECURITY: Only show inspectors belonging to current user
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     const { limit = 50, offset = 0, status } = req.query;
 
-    let whereClause = '';
-    const params = [];
+    let whereClause = 'WHERE user_id = ?';
+    const params = [req.user.id];
 
     if (status) {
-      whereClause = 'WHERE status = ?';
+      whereClause += ' AND status = ?';
       params.push(status);
     }
 
@@ -105,8 +110,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM inspectors ${whereClause}`;
-    const countParams = status ? [status] : [];
-    const [{ total }] = await db.query(countQuery, countParams);
+    const [{ total }] = await db.query(countQuery, params.slice(0, status ? 2 : 1));
 
     // Map database fields to frontend format
     const mappedInspectors = inspectors.map(inspector => ({
@@ -179,6 +183,11 @@ router.get('/', authenticateToken, async (req, res) => {
  */
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    // SECURITY: Only allow creating inspectors for current user
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     const {
       name,
       email,
@@ -211,13 +220,13 @@ router.post('/', authenticateToken, async (req, res) => {
     const query = `
       INSERT INTO inspectors (
         name, email, phone, specialization, qualifications,
-        experience, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        experience, status, user_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `;
 
     const result = await db.query(query, [
       name, email, phone, specialization,
-      qualifications, experience, status
+      qualifications, experience, status, req.user.id
     ]);
 
     // Fetch the created inspector
@@ -273,9 +282,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // SECURITY: Only show inspectors belonging to current user
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     const [inspector] = await db.query(
-      'SELECT * FROM inspectors WHERE id = ?',
-      [id]
+      'SELECT * FROM inspectors WHERE id = ? AND user_id = ?',
+      [id, req.user.id]
     );
 
     if (!inspector) {
@@ -351,10 +365,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
-    // Check if inspector exists
+    // SECURITY: Only allow updating inspectors belonging to current user
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
+    // Check if inspector exists and belongs to current user
     const [existingInspector] = await db.query(
-      'SELECT id FROM inspectors WHERE id = ?',
-      [id]
+      'SELECT id FROM inspectors WHERE id = ? AND user_id = ?',
+      [id, req.user.id]
     );
 
     if (!existingInspector) {
@@ -441,10 +460,15 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if inspector exists
+    // SECURITY: Only allow deleting inspectors belonging to current user
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
+    // Check if inspector exists and belongs to current user
     const [existingInspector] = await db.query(
-      'SELECT id FROM inspectors WHERE id = ?',
-      [id]
+      'SELECT id FROM inspectors WHERE id = ? AND user_id = ?',
+      [id, req.user.id]
     );
 
     if (!existingInspector) {
