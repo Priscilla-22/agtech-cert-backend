@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
-const { testConnection } = require('./config/database');
+const { testConnection, ensureUserIdColumn } = require('./config/database');
 require('dotenv').config();
 
 const app = express();
@@ -86,17 +86,21 @@ async function startServer() {
     const dbConnected = await testConnection();
 
     if (!dbConnected) {
-      console.log('⚠️  Server starting without database connection');
-      console.log('📝 Please check your MySQL configuration in .env file');
+      console.log('Server starting without database connection');
+      console.log('Please check your MySQL configuration in .env file');
+    } else {
+      // Run migration to ensure user_id column exists
+      console.log('Running database migrations...');
+      await ensureUserIdColumn();
     }
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-      console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`API Documentation: http://localhost:${PORT}/api-docs`);
+      console.log(`Health Check: http://localhost:${PORT}/health`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('Failed to start server:', error.message);
     process.exit(1);
   }
 }

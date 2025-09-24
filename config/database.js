@@ -30,13 +30,13 @@ const pool = mysql.createPool(dbConfig);
 async function testConnection() {
   try {
     const connection = await pool.getConnection();
-    console.log('✅ MySQL Database connected successfully');
-    console.log(`📊 Connected to database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
+    console.log('MySQL Database connected successfully');
+    console.log(`Connected to database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
     connection.release();
     return true;
   } catch (error) {
-    console.error('❌ MySQL Database connection failed:', error.message);
-    console.error('📝 Please ensure MySQL is running and check your .env configuration');
+    console.error('MySQL Database connection failed:', error.message);
+    console.error('Please ensure MySQL is running and check your .env configuration');
     return false;
   }
 }
@@ -124,11 +124,53 @@ async function deleteRecord(table, id) {
   }
 }
 
+// Check if column exists in table
+async function columnExists(table, column) {
+  try {
+    const query = `
+      SELECT COUNT(*) as count
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
+    `;
+    const [results] = await pool.execute(query, [dbConfig.database, table, column]);
+    return results[0].count > 0;
+  } catch (error) {
+    console.error(`Error checking if column ${column} exists in ${table}:`, error.message);
+    return false;
+  }
+}
+
+// Run migration to add user_id column if it doesn't exist
+async function ensureUserIdColumn() {
+  try {
+    const exists = await columnExists('farmers', 'user_id');
+
+    if (!exists) {
+      console.log('Adding user_id column to farmers table...');
+
+      // Add the column
+      await pool.execute(`
+        ALTER TABLE farmers
+        ADD COLUMN user_id INT AFTER id,
+        ADD INDEX idx_user_id (user_id),
+        ADD CONSTRAINT fk_farmers_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      `);
+
+      return true;
+    } else {
+      return true;
+    }
+  } catch (error) {
+    // Log the error but don't crash the server
+    return false;
+  }
+}
+
 // Close connection pool
 async function closeConnection() {
   try {
     await pool.end();
-    console.log('📊 Database connection pool closed');
+    console.log('Database connection pool closed');
   } catch (error) {
     console.error('Error closing database connection:', error.message);
   }
@@ -143,5 +185,6 @@ module.exports = {
   create,
   update,
   delete: deleteRecord,
-  closeConnection
+  closeConnection,
+  ensureUserIdColumn
 };
