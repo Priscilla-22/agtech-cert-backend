@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const Farm = require('../models/Farm');
-const dbConfig = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validateFarm, validateFarmUpdate } = require('../utils/validation');
 
@@ -82,7 +81,18 @@ const { validateFarm, validateFarmUpdate } = require('../utils/validation');
  */
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const farms = await db.findAll('farms');
+    // SECURITY: Only show farms belonging to farmers registered by current user
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
+    // Get farms through farmers that belong to the current user
+    const query = `
+      SELECT f.* FROM farms f
+      JOIN farmers farmer ON f.farmer_id = farmer.id
+      WHERE farmer.user_id = ?
+    `;
+    const farms = await db.query(query, [req.user.id]);
 
     // Enrich with farmer data
     const enrichedFarms = await Promise.all(farms.map(async (farm) => {

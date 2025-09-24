@@ -173,130 +173,22 @@ function mapOrganicExperience(frontendValue) {
  */
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const {
-      status,
-      certificationStatus,
-      county,
-      subCounty,
-      farmingType,
-      organicExperience,
-      educationLevel,
-      minLandSize,
-      maxLandSize,
-      search,
-      registrationDateFrom,
-      registrationDateTo,
-      limit = 50,
-      offset = 0
-    } = req.query;
-
-    // Build WHERE conditions and parameters
-    let conditions = [];
-    let params = [];
-
     // SECURITY: Only show farmers created by the current user (agronomist)
     if (!req.user.id) {
       return res.status(403).json({ error: 'User not found in database. Please register first.' });
     }
-    conditions.push('user_id = ?');
-    params.push(req.user.id);
 
-    if (status) {
-      conditions.push('status = ?');
-      params.push(status);
-    }
+    // Simplified query - just get farmers for this user
+    const farmersQuery = `SELECT * FROM farmers WHERE user_id = ? ORDER BY registration_date DESC`;
+    const farmers = await dbConfig.executeQuery(farmersQuery, [req.user.id]);
 
-    if (certificationStatus) {
-      conditions.push('certification_status = ?');
-      params.push(certificationStatus);
-    }
-
-    if (county) {
-      conditions.push('county LIKE ?');
-      params.push(`%${county}%`);
-    }
-
-    if (subCounty) {
-      conditions.push('sub_county LIKE ?');
-      params.push(`%${subCounty}%`);
-    }
-
-    if (farmingType) {
-      conditions.push('farming_type = ?');
-      params.push(farmingType);
-    }
-
-    if (organicExperience) {
-      conditions.push('organic_experience = ?');
-      params.push(organicExperience);
-    }
-
-    if (educationLevel) {
-      conditions.push('education_level = ?');
-      params.push(educationLevel);
-    }
-
-    if (minLandSize) {
-      conditions.push('total_land_size >= ?');
-      params.push(parseFloat(minLandSize));
-    }
-
-    if (maxLandSize) {
-      conditions.push('total_land_size <= ?');
-      params.push(parseFloat(maxLandSize));
-    }
-
-    if (search) {
-      conditions.push('(name LIKE ? OR email LIKE ? OR phone LIKE ?)');
-      const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm);
-    }
-
-    if (registrationDateFrom) {
-      conditions.push('registration_date >= ?');
-      params.push(registrationDateFrom);
-    }
-
-    if (registrationDateTo) {
-      conditions.push('registration_date <= ?');
-      params.push(registrationDateTo);
-    }
-
-    // Build the WHERE clause
-    const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
-
-    // Get total count for pagination
-    let totalQuery = 'SELECT COUNT(*) as total FROM farmers';
-    if (whereClause) {
-      totalQuery += ` WHERE ${whereClause}`;
-    }
-
-    const totalResult = await dbConfig.executeQuery(totalQuery, params);
-    const total = totalResult[0].total;
-
-    // Get filtered farmers with pagination
-    let farmersQuery = `SELECT * FROM farmers`;
-    let farmersParams = [...params];
-
-    if (whereClause) {
-      farmersQuery += ` WHERE ${whereClause}`;
-    }
-
-    const limitNum = Math.max(1, parseInt(limit) || 50);
-    const offsetNum = Math.max(0, parseInt(offset) || 0);
-
-    // Use string interpolation for LIMIT and OFFSET to avoid parameter binding issues
-    farmersQuery += ` ORDER BY registration_date DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
-
-    const farmers = await dbConfig.executeQuery(farmersQuery, farmersParams);
     const mappedFarmers = farmers.map(farmer => db.mapFieldsFromDatabase(farmer));
 
     res.json({
       data: mappedFarmers,
-      total,
-      limit: limitNum,
-      offset: offsetNum,
-      filters: req.query // Return applied filters for reference
+      total: farmers.length,
+      limit: 50,
+      offset: 0
     });
   } catch (error) {
     console.error('Error fetching farmers:', error);
@@ -309,16 +201,10 @@ router.get('/', authenticateToken, async (req, res) => {
       sqlMessage: error.sqlMessage
     });
 
-    // Return more specific error message in development
-    if (process.env.NODE_ENV === 'development') {
-      res.status(500).json({
-        error: 'Failed to fetch farmers',
-        details: error.message,
-        code: error.code
-      });
-    } else {
-      res.status(500).json({ error: 'Failed to fetch farmers' });
-    }
+    res.status(500).json({
+      error: 'Failed to fetch farmers',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

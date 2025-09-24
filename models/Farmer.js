@@ -14,6 +14,7 @@ class Farmer {
     const memberNumber = data.memberNumber || await this.generateMemberNumber();
 
     const farmerData = {
+      user_id: data.userId,
       name: data.name,
       member_number: memberNumber,
       email: data.email,
