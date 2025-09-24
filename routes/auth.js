@@ -84,7 +84,7 @@ router.post('/register', authenticateToken, async (req, res) => {
 
 
     // Check if user already exists
-    const existingUser = db.findBy('users', { uid });
+    const existingUser = await db.findBy('users', { uid });
     if (existingUser.length > 0) {
       return res.status(400).json({ error: 'User already registered' });
     }
@@ -96,17 +96,11 @@ router.post('/register', authenticateToken, async (req, res) => {
       name,
       phone,
       address,
-      role: 'agronomist', // default role
-      registrationDate: new Date().toISOString(),
+      role: 'agronomist',
       status: 'active'
     };
 
-    // Add users collection to our in-memory database
-    if (!db.users) {
-      db.users = [];
-    }
-
-    const user = db.create('users', userData);
+    const user = await db.create('users', userData);
 
     res.status(201).json({
       message: 'User registered successfully',
