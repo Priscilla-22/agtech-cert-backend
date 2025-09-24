@@ -316,10 +316,10 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const farmData = {
       farmerId: req.body.farmerId,
-      farmName: req.body.name || req.body.farmName,
-      location: req.body.location,
-      totalArea: req.body.totalArea,
-      organicArea: req.body.organicArea || req.body.cultivatedSize,
+      farmName: req.body.name || req.body.farmName || 'Unnamed Farm',
+      location: req.body.location || null,
+      totalArea: req.body.totalArea || req.body.size || null,
+      organicArea: req.body.organicArea || req.body.cultivatedSize || null,
       cropTypes: req.body.cropTypes || [],
       organicSince: req.body.organicSince || new Date().toISOString().split('T')[0],
       certificationStatus: 'pending'
