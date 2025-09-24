@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const Farm = require('../models/Farm');
+const dbConfig = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validateFarm, validateFarmUpdate } = require('../utils/validation');
 
