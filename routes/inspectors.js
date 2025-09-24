@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
+const { authenticateToken } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -78,7 +79,7 @@ const db = require('../models');
  *       500:
  *         description: Internal server error
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { limit = 50, offset = 0, status } = req.query;
 
@@ -176,7 +177,7 @@ router.get('/', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
       name,
@@ -268,7 +269,7 @@ router.post('/', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -345,7 +346,7 @@ router.get('/:id', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -436,7 +437,7 @@ router.put('/:id', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
