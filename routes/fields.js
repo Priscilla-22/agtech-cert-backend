@@ -75,7 +75,7 @@ const { validateField } = require('../utils/validation');
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     let fields;
 
@@ -135,7 +135,7 @@ router.get('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const field = await db.findById('fields', parseInt(req.params.id));
     if (!field) {
@@ -220,7 +220,7 @@ router.get('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const errors = validateField(req.body);
     if (errors.length > 0) {
@@ -282,7 +282,7 @@ router.post('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const errors = validateField(req.body);
     if (errors.length > 0) {
@@ -328,7 +328,7 @@ router.put('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     // Check if field exists first
     const field = await db.findById('fields', parseInt(req.params.id));

@@ -78,9 +78,19 @@ const PDFService = require('../services/pdfService');
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const certificates = await Certificate.findAll();
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
+    const query = `
+      SELECT c.* FROM certificates c
+      JOIN farms f ON c.farm_id = f.id
+      JOIN farmers farmer ON f.farmer_id = farmer.id
+      WHERE farmer.user_id = ?
+    `;
+    const certificates = await db.query(query, [req.user.id]);
 
     const enrichedCertificates = await Promise.all(certificates.map(async (certificate) => {
       const farm = await Farm.findById(certificate.farm_id);
@@ -137,7 +147,7 @@ router.get('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const certificate = await Certificate.findById(parseInt(req.params.id));
     if (!certificate) {
@@ -214,7 +224,7 @@ router.get('/:id', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { farmId, issueDate, expiryDate, cropTypes } = req.body;
 
@@ -285,7 +295,7 @@ router.post('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:id/pdf', async (req, res) => {
+router.get('/:id/pdf', authenticateToken, async (req, res) => {
   try {
     const certificate = await Certificate.findById(parseInt(req.params.id));
     if (!certificate) {
@@ -372,7 +382,7 @@ router.get('/:id/pdf', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/:id/renew', async (req, res) => {
+router.post('/:id/renew', authenticateToken, async (req, res) => {
   try {
     const certificate = await Certificate.findById(parseInt(req.params.id));
     if (!certificate) {

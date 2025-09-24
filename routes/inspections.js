@@ -132,9 +132,21 @@ router.get('/status-distribution', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const inspections = await db.findAll('inspections');
+    // SECURITY: Ensure user is authenticated and in database
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
+    // Get only inspections for farms owned by farmers belonging to current user
+    const query = `
+      SELECT i.* FROM inspections i
+      JOIN farms f ON i.farm_id = f.id
+      JOIN farmers farmer ON f.farmer_id = farmer.id
+      WHERE farmer.user_id = ?
+    `;
+    const inspections = await db.query(query, [req.user.id]);
 
     // Enrich with farm and farmer data
     const enrichedInspections = await Promise.all(inspections.map(async (inspection) => {
@@ -200,8 +212,12 @@ router.get('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     const inspection = await db.findById('inspections', parseInt(req.params.id));
     if (!inspection) {
       return res.status(404).json({ error: 'Inspection not found' });
@@ -209,6 +225,10 @@ router.get('/:id', async (req, res) => {
 
     const farm = await db.findById('farms', inspection.farm_id);
     const farmer = farm ? await db.findById('farmers', farm.farmer_id) : null;
+
+    if (!farmer || farmer.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied. You can only view inspections for your farmers.' });
+    }
 
     const mappedInspection = db.mapFieldsFromDatabase(inspection);
     const mappedFarm = farm ? db.mapFieldsFromDatabase(farm) : null;
@@ -286,7 +306,7 @@ router.get('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const errors = validateInspection(req.body);
     if (errors.length > 0) {
@@ -381,7 +401,7 @@ router.post('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const inspection = await db.findById('inspections', parseInt(req.params.id));
     if (!inspection) {
@@ -549,7 +569,7 @@ router.put('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/:id/approve', async (req, res) => {
+router.post('/:id/approve', authenticateToken, async (req, res) => {
   try {
     const inspection = await db.findById('inspections', parseInt(req.params.id));
     if (!inspection) {
@@ -665,7 +685,7 @@ router.post('/:id/approve', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/:id/reject', async (req, res) => {
+router.post('/:id/reject', authenticateToken, async (req, res) => {
   try {
     const inspection = await db.findById('inspections', parseInt(req.params.id));
     if (!inspection) {
@@ -740,7 +760,7 @@ router.post('/:id/reject', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:id/history', async (req, res) => {
+router.get('/:id/history', authenticateToken, async (req, res) => {
   try {
     const inspection = await db.findById('inspections', parseInt(req.params.id));
     if (!inspection) {
@@ -812,7 +832,7 @@ router.get('/:id/history', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     // Check if inspection exists first
     const inspection = await db.findById('inspections', parseInt(req.params.id));
