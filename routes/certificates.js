@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Certificate, Farm, Farmer, Inspection } = require('../models');
+const { authenticateToken } = require('../middleware/auth');
 const PDFService = require('../services/pdfService');
 
 

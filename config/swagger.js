@@ -6,7 +6,7 @@ const options = {
     info: {
       title: 'AgTech Certification System API',
       version: '1.0.0',
-      description: 'API for managing organic farm certifications, farmers, inspections, and certificates',
+      description: 'API for managing organic farm certifications, farmers, inspections, and certificates. All endpoints except authentication require a Firebase JWT token.',
       contact: {
         name: 'API Support',
         email: 'support@agtechcert.com'
@@ -32,7 +32,7 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Firebase JWT token'
+          description: 'Firebase JWT token. Get this from Firebase Authentication after login. Format: Bearer <token>'
         }
       },
       schemas: {

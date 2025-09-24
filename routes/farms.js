@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../models');
 const Farm = require('../models/Farm');
 const dbConfig = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 const { validateFarm, validateFarmUpdate } = require('../utils/validation');
 
 /**
@@ -79,7 +80,7 @@ const { validateFarm, validateFarmUpdate } = require('../utils/validation');
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const farms = await db.findAll('farms');
 
@@ -130,7 +131,7 @@ router.get('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/farmer/:farmerId', async (req, res) => {
+router.get('/farmer/:farmerId', authenticateToken, async (req, res) => {
   try {
     const farmerId = parseInt(req.params.farmerId);
 
@@ -201,7 +202,7 @@ router.get('/farmer/:farmerId', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const farm = await db.findById('farms', parseInt(req.params.id));
     if (!farm) {
@@ -289,7 +290,7 @@ router.get('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const errors = validateFarm(req.body);
     if (errors.length > 0) {
@@ -376,7 +377,7 @@ router.post('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const errors = validateFarmUpdate(req.body);
     if (errors.length > 0) {
@@ -437,7 +438,7 @@ router.put('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const farm = await db.findById('farms', parseInt(req.params.id));
     if (!farm) {

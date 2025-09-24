@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
+const { authenticateToken } = require('../middleware/auth');
 const { validateField } = require('../utils/validation');
 
 /**

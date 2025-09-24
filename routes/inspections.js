@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../models');
 const Inspection = require('../models/Inspection');
 const Certificate = require('../models/Certificate');
+const { authenticateToken } = require('../middleware/auth');
 const { validateInspection } = require('../utils/validation');
 const { CHECKLIST_QUESTIONS, createChecklist, calculateComplianceScore, isEligibleForCertification, validateChecklist, isChecklistComplete } = require('../utils/inspection');
 const { generateCertificateNumber, calculateExpiryDate, generateCertificatePDF } = require('../utils/pdfGenerator');

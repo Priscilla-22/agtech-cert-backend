@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const dbConfig = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 const { validateFarmer, validateFarmerUpdate, getUserFriendlyError } = require('../utils/validation');
 
 const generateMemberNumber = () => {
@@ -63,6 +64,8 @@ function mapOrganicExperience(frontendValue) {
  *     summary: Get all farmers with optional filtering
  *     description: Retrieve a list of all registered farmers with optional filtering parameters
  *     tags: [Farmers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: status
@@ -168,7 +171,7 @@ function mapOrganicExperience(frontendValue) {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const {
       status,
@@ -190,6 +193,13 @@ router.get('/', async (req, res) => {
     // Build WHERE conditions and parameters
     let conditions = [];
     let params = [];
+
+    // SECURITY: Only show farmers created by the current user (agronomist)
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+    conditions.push('user_id = ?');
+    params.push(req.user.id);
 
     if (status) {
       conditions.push('status = ?');
@@ -319,6 +329,8 @@ router.get('/', async (req, res) => {
  *     summary: Get farmer by ID
  *     description: Retrieve a specific farmer by their unique identifier
  *     tags: [Farmers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -346,11 +358,20 @@ router.get('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     const farmer = await db.findById('farmers', parseInt(req.params.id));
     if (!farmer) {
       return res.status(404).json({ error: 'Farmer not found' });
+    }
+
+    // SECURITY: Ensure user can only access farmers they created
+    if (farmer.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied. You can only view farmers you registered.' });
     }
 
     // Include farms for this farmer
@@ -372,6 +393,8 @@ router.get('/:id', async (req, res) => {
  *     summary: Create new farmer
  *     description: Register a new farmer in the system
  *     tags: [Farmers]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -413,12 +436,18 @@ router.get('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
+    // SECURITY: Ensure user is authenticated and in database
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     console.log('=== FARMER CREATION DEBUG ===');
     console.log('Received payload:', JSON.stringify(req.body, null, 2));
     console.log('landTenure value:', req.body.landTenure);
     console.log('organicExperience value:', req.body.organicExperience);
+    console.log('Creating farmer for user ID:', req.user.id);
 
     const errors = validateFarmer(req.body);
     console.log('Validation errors:', errors);
@@ -463,6 +492,7 @@ router.post('/', async (req, res) => {
     const farmerData = {
       // System generated fields
       memberNumber: generateMemberNumber(),
+      userId: req.user.id, // SECURITY: Link farmer to the creating agronomist
 
       // Step 1: Personal & Contact Information
       name: req.body.name,
@@ -573,6 +603,8 @@ router.post('/', async (req, res) => {
  *     summary: Update farmer
  *     description: Update an existing farmer's information
  *     tags: [Farmers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -600,8 +632,22 @@ router.post('/', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
+    // SECURITY: Check if farmer exists and belongs to current user
+    const existingFarmer = await db.findById('farmers', parseInt(req.params.id));
+    if (!existingFarmer) {
+      return res.status(404).json({ error: 'Farmer not found' });
+    }
+
+    if (existingFarmer.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied. You can only update farmers you registered.' });
+    }
+
     const errors = validateFarmerUpdate(req.body);
     if (errors.length > 0) {
       return res.status(400).json({ errors });
@@ -627,6 +673,8 @@ router.put('/:id', async (req, res) => {
  *     summary: Delete farmer
  *     description: Delete a farmer and all associated data (farms, fields, inspections)
  *     tags: [Farmers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -646,12 +694,21 @@ router.put('/:id', async (req, res) => {
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
+    if (!req.user.id) {
+      return res.status(403).json({ error: 'User not found in database. Please register first.' });
+    }
+
     // Check if farmer exists first
     const farmer = await db.findById('farmers', parseInt(req.params.id));
     if (!farmer) {
       return res.status(404).json({ error: 'Farmer not found' });
+    }
+
+    // SECURITY: Ensure user can only delete farmers they created
+    if (farmer.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied. You can only delete farmers you registered.' });
     }
 
     // Also delete associated farms, fields, inspections
