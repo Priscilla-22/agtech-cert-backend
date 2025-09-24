@@ -3,6 +3,7 @@ const router = express.Router();
 const { Certificate, Farm, Farmer, Inspection } = require('../models');
 const { authenticateToken } = require('../middleware/auth');
 const PDFService = require('../services/pdfService');
+const { executeQuery } = require('../config/database');
 
 
 
@@ -90,7 +91,7 @@ router.get('/', authenticateToken, async (req, res) => {
       JOIN farmers farmer ON f.farmer_id = farmer.id
       WHERE farmer.user_id = ?
     `;
-    const certificates = await db.query(query, [req.user.id]);
+    const certificates = await executeQuery(query, [req.user.id]);
 
     const enrichedCertificates = await Promise.all(certificates.map(async (certificate) => {
       const farm = await Farm.findById(certificate.farm_id);
