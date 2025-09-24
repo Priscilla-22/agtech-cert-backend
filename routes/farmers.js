@@ -256,7 +256,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     // SECURITY: Ensure user can only access farmers they created
+    console.log('Farmer access check - Farmer user_id:', farmer.user_id, 'Request user id:', req.user.id);
     if (farmer.user_id !== req.user.id) {
+      console.log('Access denied - user_id mismatch');
       return res.status(403).json({ error: 'Access denied. You can only view farmers you registered.' });
     }
 
